@@ -1,0 +1,19 @@
+data = h5read(filename, dataset)
+data = h5read(filename, dataset, start, count)
+data = h5read(filename, dataset, start, count, stride)
+data = h5read(filename, dataset, start, count, stride, block)
+
+Reads a hyperslab of data from an hdf5 file. The datatype will be coerced
+    to double.
+
+  filename: name of the hdf5 file.
+  dataset: name of the dataset in the hdf5 file to read.
+
+The other four are 1xn or nx1 matrices, where n is the number of dimensions
+    in the dataset. If all are omitted, the entire dataset will be read.
+
+  start: 1-based starting offset
+  count: number of blocks to read. If 0 or Inf is specified in any dimension,
+         as many blocks as possible are read in that dimension.
+  stride: offset between the start of each block. Defaults to a vector of ones.
+  block: size of each block to read. Defaults to a vector of ones.
