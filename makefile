@@ -10,7 +10,7 @@ h5read.o: h5read.doc.h
 h5write.o: h5write.doc.h
 
 %.oct: %.o h5file.o
-	mkoctfile -o $@ $< h5file.o
+	mkoctfile -o $@ $< h5file.o -lhdf5
 
 %.o: %.cpp h5file.h
 	mkoctfile -c $<

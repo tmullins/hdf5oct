@@ -159,7 +159,7 @@ int H5File::select_hyperslab(const Matrix& start, const Matrix& count,
     if (h5_dims[i] < end)
     {
       error("In dimension %d, dataset only has %d elements, but at least %d"
-            " required for requested hyperslab", i+1, h5_dims[i], end);
+            " required for requested hyperslab", i+1, (int)h5_dims[i], end);
       return 1;
     }
   }
