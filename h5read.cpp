@@ -140,5 +140,7 @@ DEFUN_DLD(h5read, args, nargout, string((char*) h5read_doc))
     if (file.select_hyperslab(start, count, stride, block))
       return octave_value_list();
   }
-  return octave_value(file.read());
+  
+//  return octave_value(file.read());
+  return file.read();
 }

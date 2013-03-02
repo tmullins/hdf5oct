@@ -33,7 +33,8 @@ public:
   int select_all();
   int select_hyperslab(const Matrix& start, const Matrix& count,
       const Matrix& stride, const Matrix& block);
-  NDArray read();
+  octave_value read();
+      
 private:
   int rank;
   hsize_t *h5_dims;
@@ -42,4 +43,9 @@ private:
   hid_t dataset;
   hid_t dataspace;
   hid_t memspace;
+  NDArray read_double();
+  ComplexNDArray read_complex();
 };
+
+bool hdf5_types_compatible (hid_t t1, hid_t t2);
+hid_t hdf5_make_complex_type (hid_t num_type);

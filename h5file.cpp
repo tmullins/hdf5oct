@@ -186,7 +186,71 @@ int H5File::select_hyperslab(const Matrix& start, const Matrix& count,
   return 0;
 }
 
-NDArray H5File::read()
+octave_value H5File::read()
+{
+    hid_t type_id = -1, type_class_id = -1;
+    bool is_cmplx=false;
+    type_id = H5Dget_type (dataset);
+    type_class_id = H5Tget_class (type_id);
+    if (type_class_id == H5T_COMPOUND) {
+	hid_t complex_type = hdf5_make_complex_type (H5T_NATIVE_DOUBLE);
+        if (hdf5_types_compatible (type_id, complex_type))
+		is_cmplx=true;
+    }
+    if (is_cmplx)
+	return octave_value(read_complex());
+    else
+	return octave_value(read_double());
+}
+
+ComplexNDArray H5File::read_complex()
+{
+  if (dataspace < 0)
+  {
+    return NDArray();
+  }
+
+  Matrix perm_vec(1, rank);
+  if (rank >= 2)
+  {
+    dim_vector new_mat_dims;
+    new_mat_dims.resize(rank);
+    for (int i = 0; i < rank; i++)
+    {
+      int j = rank-i-1;
+      new_mat_dims(i) = mat_dims(j);
+      perm_vec(i) = j;
+    }
+    mat_dims = new_mat_dims;
+  }
+
+  hsize_t *hmem = alloc_hsize(mat_dims);
+  hid_t memspace = H5Screate_simple(rank, hmem, hmem);
+  free(hmem);
+  if (memspace < 0)
+  {
+    return NDArray();
+  }
+
+  ComplexNDArray mat(mat_dims);
+
+  herr_t read_result = H5Dread(dataset, hdf5_make_complex_type (H5T_NATIVE_DOUBLE), memspace, dataspace,
+      H5P_DEFAULT, mat.fortran_vec());
+  if (read_result < 0)
+  {
+    mat = NDArray();
+  }
+
+  else if (rank >= 2)
+  {
+    mat = mat.permute(perm_vec);
+  }
+
+  return mat;
+}
+
+
+NDArray H5File::read_double()
 {
   if (dataspace < 0)
   {
@@ -231,3 +295,38 @@ NDArray H5File::read()
 
   return mat;
 }
+
+
+bool
+hdf5_types_compatible (hid_t t1, hid_t t2)
+{
+  int n;
+  if ((n = H5Tget_nmembers (t1)) != H5Tget_nmembers (t2))
+    return false;
+
+  for (int i = 0; i < n; ++i)
+    {
+      hid_t mt1 = H5Tget_member_type (t1, i);
+      hid_t mt2 = H5Tget_member_type (t2, i);
+
+      if (H5Tget_class (mt1) != H5Tget_class (mt2))
+        return false;
+
+      H5Tclose (mt2);
+      H5Tclose (mt1);
+    }
+
+  return true;
+}
+
+hid_t
+hdf5_make_complex_type (hid_t num_type)
+{
+  hid_t type_id = H5Tcreate (H5T_COMPOUND, sizeof (double) * 2);
+
+  H5Tinsert (type_id, "real", 0 * sizeof (double), num_type);
+  H5Tinsert (type_id, "imag", 1 * sizeof (double), num_type);
+
+  return type_id;
+}
+
