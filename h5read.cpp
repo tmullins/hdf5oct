@@ -102,8 +102,15 @@ DEFUN_DLD(h5read, args, nargout, string((char*) h5read_doc))
   string dataset = args(1).string_value();
   if (error_state)
     return octave_value_list();
-
+    
+  void *olderr;
+  H5E_auto_t oef;
+  
+  H5Eget_auto(H5E_DEFAULT,&oef,&olderr);
+  H5Eset_auto(H5E_DEFAULT,0,0);
   H5File file(filename.c_str(), dataset.c_str());
+  H5Eset_auto(H5E_DEFAULT,oef,olderr);
+
   int rank = file.get_rank();
   if (rank < 0)
     return octave_value_list();
