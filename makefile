@@ -2,7 +2,7 @@ CXX=h5c++
 #CXX=g++
 CPPFLAGS=
 octs=h5read.oct h5readatt.oct
-objs=$(octs:.oct=.o) h5file.o
+objs=$(octs:.oct=.o) test/write_test.o h5file.o
 docs=$(octs:.oct=.doc)
 hdrs=$(docs:.doc=.doc.h)
 MKOCTFILE=CXX=$(CXX) mkoctfile
@@ -10,6 +10,7 @@ MKOCTFILE=CXX=$(CXX) mkoctfile
 VERSION=0.2.0
 PACKAGEFILE=hdf5oct-$(VERSION).tar.gz
 
+.PHONY: test clean install uninstall package
 
 all: $(octs) test.h5 package
 
@@ -49,13 +50,13 @@ $(PACKAGEFILE): $(octs)
 # TESTING ###########
 
 # a minimal program to generate some testdata
-write_test: write_test.cpp
+write_test: test/write_test.cpp
 	$(CXX) -o $@ $< -lhdf5
 
-test.h5: write_test
-	./write_test
+test/test.h5: test/write_test
+	cd test && ./write_test
 
 # a target to test the octave functions
-test: install test.h5
+test: test/test.h5
 	@echo "-- Perform Tests --------------"
-	octave --silent --no-gui h5test.m
+	cd test && octave --silent --no-gui h5test.m

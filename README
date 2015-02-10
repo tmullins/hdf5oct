@@ -20,14 +20,14 @@ To install, just use
     make
     
 This will produce a package file named "hdf5oct-*.tar.gz" .  Then
-start GNU Octave and install the package (using the correct file name)
-with
-
-    pkg install hdf5-0.2.0.tar.gz
-
-or
+you may either install the package with
 
     make install
+
+or you may start GNU Octave and install the package manually (using
+the correct file name) with the command
+
+    pkg install hdf5-0.2.0.tar.gz
 
 This will put the *.oct files somewhere where Octave will find them.
 You can try running
@@ -35,7 +35,14 @@ You can try running
     make test
 
 
-TODO:
+# INSTALLATION #########################
+
+To uninstall the package you may want to use
+
+   make uninstall
+
+# TODO #################################
+
 -write h5write, h5create, h5writeatt, h5readattr, h5disp, and h5info. This may
  take some fairly major changes to H5File.
 -maybe use hdf5's c++ interface instead of the c interace.
