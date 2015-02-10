@@ -126,7 +126,7 @@ DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
 		    H5Aclose(attr);
 		    CloseH5Object(obj);
 		    H5Fclose(file);
-		    error("h5readatt: reading the given Attribute failed");
+		    error("h5readatt: reading the given float Attribute failed");
 		    return retval;
 		  }
 		for (size_t n=0;n<numVal;++n)
@@ -139,7 +139,7 @@ DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
 		    H5Aclose(attr);
 		    CloseH5Object(obj);
 		    H5Fclose(file);
-		    error("h5readatt: reading the given Attribute failed");
+		    error("h5readatt: reading the given double Attribute failed");
 		    return retval;
 		  }
 	      }
@@ -171,7 +171,7 @@ DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
 		    H5Aclose(attr);
 		    CloseH5Object(obj);
 		    H5Fclose(file);
-		    error("h5readatt: reading the given Attribute failed");
+		    error("h5readatt: reading the given integer Attribute failed");
 		    return retval;
 		  }
 		for (size_t n=0;n<numVal;++n)
@@ -194,8 +194,23 @@ DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
 	  }
 	else if(H5Tget_class(type)==H5T_STRING)
 	  {
-	    
-	    retval = octave_value("testvalue");
+	    // Size of each string:
+	    size_t size = H5Tget_size(type);
+	    // to read an array of strings (for future work): 
+	    //totsize = size*sdim[0]*sdim[1];
+	    // to read a single string:
+	    size_t totsize = size;
+	    // Set up read buffer for attribute
+	    char* buf = (char*)calloc(totsize, sizeof(char));
+	    if(H5Aread(attr, type, buf)<0)
+	    {
+	      H5Aclose(attr);
+	      CloseH5Object(obj);
+	      H5Fclose(file);
+	      error("h5readatt: reading the given string Attribute failed");
+	      return retval;
+	    }
+	    retval = octave_value(buf);
 	  }
 	else //none of the supported data types
 	{
