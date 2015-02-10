@@ -12,7 +12,7 @@ PACKAGEFILE=hdf5oct-$(VERSION).tar.gz
 
 .PHONY: test clean install uninstall package
 
-all: $(octs) test.h5 package
+all: $(octs) package
 
 h5file.o:
 h5read.o: h5read.doc.h

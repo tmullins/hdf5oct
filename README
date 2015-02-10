@@ -5,13 +5,20 @@ Copyright 2012 Tom Mullins
 Copyright 2015 Tom Mullins, Anton Starikov, Thorsten Liebig, Stefan Großhauser
 
 This is a library for GNU Octave for reading hdf5 files. At the moment it
-provides only one function, modeled after Matlab's h5read, which can read
-subsets of a dataset.  Octave's load function will attempt to read an entire
-dataset, which for very large datasets is undesired. h5util's h5read function
-does slightly better, reading only 2d slices of 3d datasets, but that's still
-fairly limiting. This exposes libhdf5's H5Sselect_hyperslab in a way which
-tries to be compatible with Matlab.
+provides only few functions:
 
+ h5read: modeled after Matlab's h5read, which can read subsets of a
+ 	 dataset.  Octave's load function will attempt to read an
+ 	 entire dataset, which for very large datasets is
+ 	 undesired. h5util's h5read function does slightly better,
+ 	 reading only 2d slices of 3d datasets, but that's still
+ 	 fairly limiting. This exposes libhdf5's H5Sselect_hyperslab
+ 	 in a way which tries to be compatible with Matlab.
+
+ h5readatt: This function was written by thliebig and allows to read some
+ 	    HDF5 attributes.
+
+Note that only few of the HDF5 datatypes are supported by hdf5oct.
 
 # INSTALLATION #########################
 
@@ -43,7 +50,8 @@ To uninstall the package you may want to use
 
 # TODO #################################
 
--write h5write, h5create, h5writeatt, h5readattr, h5disp, and h5info. This may
+-allow h5readatt to read strings
+-write h5write, h5create, h5writeatt, h5disp, and h5info. This may
  take some fairly major changes to H5File.
 -maybe use hdf5's c++ interface instead of the c interace.
 -write more comprehensive tests instead of a few random choices. Also test for
