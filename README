@@ -1,8 +1,8 @@
-
-  ===  hdf5oct  ===
+hdf5oct - a HDF5 wrapper for GNU Octave
+=======================================
 
 Copyright 2012 Tom Mullins
-
+Copyright 2015 Tom Mullins, Anton Starikov, Thorsten Liebig, Stefan Großhauser
 
 This is a library for GNU Octave for reading hdf5 files. At the moment it
 provides only one function, modeled after Matlab's h5read, which can read
@@ -12,14 +12,28 @@ does slightly better, reading only 2d slices of 3d datasets, but that's still
 fairly limiting. This exposes libhdf5's H5Sselect_hyperslab in a way which
 tries to be compatible with Matlab.
 
-To install, just use "make" or "make all" or "make h5read.oct". Then move
-h5read.oct somewhere where Octave will find it. You can try running h5test.m if
-you want to see if it works. 
 
-If anyone wants to take this code and put it in the Octave Forge, you're
-welcome to. Especially if you want to add h5write, h5create, etc :). I may
-write more of those in the future, but if someone else does it first I'd be
-okay with that.
+# INSTALLATION #########################
+
+To install, just use
+
+    make
+    
+This will produce a package file named "hdf5oct-*.tar.gz" .  Then
+start GNU Octave and install the package (using the correct file name)
+with
+
+    pkg install hdf5-0.2.0.tar.gz
+
+or
+
+    make install
+
+This will put the *.oct files somewhere where Octave will find them.
+You can try running
+
+    make test
+
 
 TODO:
 -write h5write, h5create, h5writeatt, h5readattr, h5disp, and h5info. This may

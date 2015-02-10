@@ -40,7 +40,7 @@ using namespace std;
 void CloseH5Object(hid_t obj)
 {
 #if ((H5_VERS_MAJOR == 1) && (H5_VERS_MINOR == 6))
-	// try group close, than Dataset close
+	// try group close, then Dataset close
 	if (H5Gclose(obj)<0)
 		H5Dclose(obj);
 #else
@@ -64,9 +64,11 @@ DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
 	}
 
 	//suppress hdf5 error output
-	//H5Eset_auto(NULL, NULL);
+	H5Eset_auto(H5E_DEFAULT,0,0);
 
+	//open the hdf5 file
 	hid_t file = H5Fopen( args(0).string_value().c_str(), H5F_ACC_RDONLY, H5P_DEFAULT );
+	
 	if (file==-1)
 	{
 	  error("h5readatt: opening the given File failed");
@@ -112,7 +114,90 @@ DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
 	  return retval;
 	}
 
-	if (H5Tget_class(type)!=H5T_FLOAT)
+	size_t numVal = H5Aget_storage_size(attr)/H5Tget_size(type);
+	if(H5Tget_class(type)==H5T_FLOAT)
+	  {
+	    double value[numVal];
+	    if (H5Tget_size(type)==sizeof(float))
+	      {
+		float f_value[numVal];
+		if (H5Aread(attr, H5T_NATIVE_FLOAT, f_value)<0)
+		  {
+		    H5Aclose(attr);
+		    CloseH5Object(obj);
+		    H5Fclose(file);
+		    error("h5readatt: reading the given Attribute failed");
+		    return retval;
+		  }
+		for (size_t n=0;n<numVal;++n)
+		  value[n] = f_value[n];
+	      }
+	    else if (H5Tget_size(type)==sizeof(double))
+	      {
+		if (H5Aread(attr, H5T_NATIVE_DOUBLE, value)<0)
+		  {
+		    H5Aclose(attr);
+		    CloseH5Object(obj);
+		    H5Fclose(file);
+		    error("h5readatt: reading the given Attribute failed");
+		    return retval;
+		  }
+	      }
+	    else
+	      {
+		H5Aclose(attr);
+		CloseH5Object(obj);
+		H5Fclose(file);
+		error("h5readatt: reading the given float Attribute failed: cannot handle size of type");
+		return retval;
+	      }
+
+	    Matrix mat(numVal,1);
+	    for (size_t n=0;n<numVal;++n)
+	      mat(n)=value[n];
+	    retval = octave_value(mat);
+
+	  }
+	else if(H5Tget_class(type)==H5T_INTEGER)
+	  {
+	    // Integer attributes are casted to floating point octave values
+	    
+	    double value[numVal];
+	    if (H5Tget_size(type)==sizeof(int))
+	      {
+		int f_value[numVal];
+		if(H5Aread(attr, H5T_NATIVE_INT, f_value)<0)
+		  {
+		    H5Aclose(attr);
+		    CloseH5Object(obj);
+		    H5Fclose(file);
+		    error("h5readatt: reading the given Attribute failed");
+		    return retval;
+		  }
+		for (size_t n=0;n<numVal;++n)
+		  value[n] = f_value[n]*1.0;
+	      }
+	    else
+	      {
+		H5Aclose(attr);
+		CloseH5Object(obj);
+		H5Fclose(file);
+		error("h5readatt: reading the given integer Attribute failed: cannot handle size of type");
+		return retval;
+	      }
+
+	    Matrix mat(numVal,1);
+	    for (size_t n=0;n<numVal;++n)
+	      mat(n)=value[n];
+	    retval = octave_value(mat);
+
+	  }
+	else if(H5Tget_class(type)==H5T_STRING)
+	  {
+	    
+	    retval = octave_value("testvalue");
+	  }
+	else //none of the supported data types
 	{
 	  H5Aclose(attr);
 	  CloseH5Object(obj);
@@ -121,49 +206,11 @@ DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
 	  return retval;
 	}
 
-	size_t numVal = H5Aget_storage_size(attr)/H5Tget_size(type);
-	double value[numVal];
-	if (H5Tget_size(type)==sizeof(float))
-	{
-	  float f_value[numVal];
-	  if (H5Aread(attr, H5T_NATIVE_FLOAT, f_value)<0)
-	  {
-	    H5Aclose(attr);
-	    CloseH5Object(obj);
-	    H5Fclose(file);
-	    error("h5readatt: reading the given Attribute failed");
-	    return retval;
-	  }
-	  for (size_t n=0;n<numVal;++n)
-	    value[n] = f_value[n];
-	}
-	else if (H5Tget_size(type)==sizeof(double))
-	{
-	  if (H5Aread(attr, H5T_NATIVE_DOUBLE, value)<0)
-	  {
-	    H5Aclose(attr);
-	    CloseH5Object(obj);
-	    H5Fclose(file);
-	    error("h5readatt: reading the given Attribute failed");
-	    return retval;
-	  }
-	}
-	else
-	{
-	    H5Aclose(attr);
-	    CloseH5Object(obj);
-	    H5Fclose(file);
-	    error("h5readatt: reading the given Attribute failed: unknown type");
-	    return retval;
-	}
 
 	H5Aclose(attr);
 	CloseH5Object(obj);
 	H5Fclose(file);
-	Matrix mat(numVal,1);
-	for (size_t n=0;n<numVal;++n)
-		mat(n)=value[n];
-	retval = octave_value(mat);
+
 	return retval;
 }
 
