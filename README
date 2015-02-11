@@ -15,8 +15,9 @@ provides only few functions:
  	 fairly limiting. This exposes libhdf5's H5Sselect_hyperslab
  	 in a way which tries to be compatible with Matlab.
 
- h5readatt: This function was written by thliebig and allows to read some
- 	    HDF5 attributes.
+ h5readatt: Most of this function was written by thliebig. Itd allows
+ 	    to read scalar HDF5 attributes of some types (float,
+ 	    integer, string).
 
 Note that only few of the HDF5 datatypes are supported by hdf5oct.
 
@@ -34,7 +35,7 @@ you may either install the package with
 or you may start GNU Octave and install the package manually (using
 the correct file name) with the command
 
-    pkg install hdf5-0.2.0.tar.gz
+    pkg install hdf5oct-0.2.0.tar.gz
 
 This will put the *.oct files somewhere where Octave will find them.
 You can try running
@@ -50,12 +51,36 @@ To uninstall the package you may want to use
 
 # TODO #################################
 
--allow h5readatt to read strings
--write h5write, h5create, h5writeatt, h5disp, and h5info. This may
+-write h5write, h5create, h5writeatt. This may
  take some fairly major changes to H5File.
+-read string typed datasets
+-read string-array typed attributes
+-document how to read complex data
 -maybe use hdf5's c++ interface instead of the c interace.
 -write more comprehensive tests instead of a few random choices. Also test for
  error conditions.
+-test h5readatt
 -test with a chunked dataset with an unlimited dimension (should just work,
  though I haven't tried it)
 -modify to follow "Octave conventions" if I ever find info on what those are.
+
+For integration into octave core:
+
+- make it really clean
+
+- try to get it all in a single oct file. You can then map multiple
+  functions to a single oct with autoload (see the urlwrite.cc file for
+  an example)
+
+- then build it depedently based on the presence of
+  hdf5. Check if HAVE_HDF5 is true to build it or to have
+  gripe_disabled_feature (function_name, "HDF5]")
+
+- drop the HDF5 major version check you are now doing for windows.
+  Instead, have a configure macro to check for features (or lack of
+  them).
+  https://github.com/stegro/hdf5oct/blob/master/h5readatt.cpp#L42
+  That check is done at build time, and the configure script will
+  inform the user if he is building Octave without hdf5 support.
+
+  
