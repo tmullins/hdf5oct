@@ -1,6 +1,6 @@
 CXX=h5c++
 #CXX=g++
-CPPFLAGS=-DH5_USE_16_API
+#CPPFLAGS=-DH5_USE_16_API
 src=h5read.cpp h5readatt.cpp h5file.cpp
 headers=h5file.h
 octfile=hdf5oct.oct

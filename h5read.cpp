@@ -21,21 +21,24 @@
  *
  */
 
+// PKG_ADD: autoload("h5read", "hdf5oct.oct");
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
-#if HAVE_HDF5
-
-// PKG_ADD: autoload("h5readatt", "hdf5oct.oct");
 
 #include <octave/oct.h>
 #include <octave/lo-ieee.h>
 #include <cstdlib>
 #include <string>
-#include "h5file.h"
+#include "gripes.h"
+
 #include "h5read.doc.h"
+
 using namespace std;
+
+#ifdef HAVE_HDF5
+#include "h5file.h"
 
 bool any_int_leq_zero(const Matrix& mat)
 {
@@ -96,8 +99,14 @@ int check_vec(const octave_value& val, Matrix& mat/*out*/,
   return 0;
 }
 
+#endif
+
 DEFUN_DLD(h5read, args, nargout, string((char*) h5read_doc))
 {
+  octave_value retval;
+#ifndef HAVE_HDF5
+        gripe_disabled_feature("h5read", "HDF5 IO");
+#else
   int nargin = args.length();
 
   if (nargin < 2 || nargin == 3 || nargin > 6 || nargout > 1)
@@ -156,8 +165,8 @@ DEFUN_DLD(h5read, args, nargout, string((char*) h5read_doc))
       return octave_value_list();
   }
   
-//  return octave_value(file.read());
-  return file.read();
+  retval = file.read();
+#endif
+  return retval;
 }
 
-#endif

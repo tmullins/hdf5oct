@@ -21,7 +21,13 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <octave/oct.h>
+
+#ifdef HAVE_HDF5
 #include <hdf5.h>
 
 class H5File
@@ -49,3 +55,5 @@ private:
 
 bool hdf5_types_compatible (hid_t t1, hid_t t2);
 hid_t hdf5_make_complex_type (hid_t num_type);
+
+#endif
