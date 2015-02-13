@@ -21,6 +21,14 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#if HAVE_HDF5
+
+// PKG_ADD: autoload("h5readatt", "hdf5oct.oct");
+
 #include <octave/oct.h>
 #include <octave/lo-ieee.h>
 #include <cstdlib>
@@ -151,3 +159,5 @@ DEFUN_DLD(h5read, args, nargout, string((char*) h5read_doc))
 //  return octave_value(file.read());
   return file.read();
 }
+
+#endif

@@ -68,9 +68,7 @@ For integration into octave core:
 
 - make it really clean
 
-- try to get it all in a single oct file. You can then map multiple
-  functions to a single oct with autoload (see the urlwrite.cc file for
-  an example)
+- get rid of the warning: doc_cache_create: unusable help text found in file 'hdf5oct'
 
 - then build it depedently based on the presence of
   hdf5. Check if HAVE_HDF5 is true to build it or to have

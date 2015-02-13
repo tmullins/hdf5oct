@@ -1,9 +1,12 @@
 CXX=h5c++
 #CXX=g++
-CPPFLAGS=
-octs=h5read.oct h5readatt.oct
-objs=$(octs:.oct=.o) test/write_test.o h5file.o
-docs=$(octs:.oct=.doc)
+CPPFLAGS=-DH5_USE_16_API
+src=h5read.cpp h5readatt.cpp h5file.cpp
+headers=h5file.h
+octfile=hdf5oct.oct
+objs=$(src:.cpp=.o)
+testobjs=test/write_test.o
+docs=$(src:.cpp=.doc)
 hdrs=$(docs:.doc=.doc.h)
 MKOCTFILE=CXX=$(CXX) mkoctfile
 
@@ -12,25 +15,24 @@ PACKAGEFILE=hdf5oct-$(VERSION).tar.gz
 
 .PHONY: test clean install uninstall package
 
-all: $(octs) package
+all: $(octfile) package
 
 h5file.o:
 h5read.o: h5read.doc.h
 h5readatt.o: h5readatt.doc.h
 h5write.o: h5write.doc.h
 
-%.oct: %.o h5file.o
-	$(MKOCTFILE) -o $@ $< h5file.o -lhdf5 -DH5_USE_16_API
+$(octfile): $(objs)
+	$(MKOCTFILE) -o $@ $(objs)
 
-%.o: %.cpp h5file.h
+%.o: %.cpp $(headers)
 	$(MKOCTFILE) -c $<
 
 %.doc.h: %.doc
 	xxd -i $< | sed 's/\(0x..\)$$/\1, 0x00/' > $@
 
 clean:
-	rm -f $(objs) $(octs) $(hdrs) write_test test.h5 $(PACKAGEFILE)
-
+	rm -f $(objs) $(octfile) $(hdrs) $(testobjs) write_test test.h5 $(PACKAGEFILE)
 
 install: $(PACKAGEFILE)
 	@echo "-- Install Octave Package ------------"
@@ -42,9 +44,9 @@ uninstall:
 
 package: $(PACKAGEFILE)
 
-$(PACKAGEFILE): $(octs)
+$(PACKAGEFILE): $(octfile)
 	mkdir -p package/inst
-	cp $(octs) package/inst
+	cp $(octfile) package/inst
 	tar -czf $(PACKAGEFILE) package/
 
 # TESTING ###########

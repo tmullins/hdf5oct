@@ -28,6 +28,14 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#if HAVE_HDF5
+
+// PKG_ADD: autoload("h5readatt", "hdf5oct.oct");
+
 #include <octave/oct.h>
 #include <octave/ov-struct.h>
 #include <cstdlib>
@@ -36,9 +44,10 @@
 #include "h5readatt.doc.h"
 using namespace std;
 
-// this special treatment is necessary because Win32-Octave ships with a very old hdf5 version (1.6.10)
+
 void CloseH5Object(hid_t obj)
 {
+// this special treatment is necessary because Win32-Octave ships with a very old hdf5 version (1.6.10)
 #if ((H5_VERS_MAJOR == 1) && (H5_VERS_MINOR == 6))
 	// try group close, then Dataset close
 	if (H5Gclose(obj)<0)
@@ -229,3 +238,4 @@ DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
 	return retval;
 }
 
+#endif

@@ -21,6 +21,12 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#if HAVE_HDF5
+
 #include <octave/oct.h>
 #include <octave/lo-ieee.h>
 #include <hdf5.h>
@@ -330,3 +336,4 @@ hdf5_make_complex_type (hid_t num_type)
   return type_id;
 }
 
+#endif
