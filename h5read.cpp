@@ -1,6 +1,7 @@
 /*
  *
  *    Copyright 2012 Tom Mullins
+ *    Copyright 2015 Tom Mullins, Stefan Großhauser
  *
  *
  *    This file is part of hdf5oct.
@@ -21,8 +22,6 @@
  *
  */
 
-// PKG_ADD: autoload("h5read", "hdf5oct.oct");
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -37,7 +36,11 @@
 
 using namespace std;
 
-#ifdef HAVE_HDF5
+#if ((H5_VERS_MAJOR > 1) || (H5_VERS_MINOR >= 8))
+#define HAVE_HDF5_18 1
+#endif
+
+#if defined(HAVE_HDF5) && defined(HAVE_HDF5_18)
 #include "h5file.h"
 
 bool any_int_leq_zero(const Matrix& mat)
@@ -55,7 +58,7 @@ bool any_int_leq_zero(const Matrix& mat)
 // if ALLOW_ZEROS, then Infs will be converted to 0s (used for COUNT)
 // else, 0s will produce an error message (used for others)
 int check_vec(const octave_value& val, Matrix& mat/*out*/,
-    const char *name, int rank, bool allow_zeros)
+    const char *name, bool allow_zeros)
 {
   mat = val.matrix_value();
   if (error_state)
@@ -63,21 +66,16 @@ int check_vec(const octave_value& val, Matrix& mat/*out*/,
     return 1;
   }
 
-  if (rank == 0 && mat.is_empty())
+  if (!mat.is_vector())
   {
-    return 0;
-  }
-
-  if (!mat.is_vector() || mat.nelem() != rank)
-  {
-    error("%s must be a vector of length %d, the dataset rank", name, rank);
+    error("%s must be a vector", name);
     return 1;
   }
 
   double mind, maxd;
   if (allow_zeros)
   {
-    for (int i = 0; i < rank; i++)
+    for (int i = 0; i < mat.nelem(); i++)
     {
       if (mat(i) == octave_Inf)
       {
@@ -103,9 +101,9 @@ int check_vec(const octave_value& val, Matrix& mat/*out*/,
 
 DEFUN_DLD(h5read, args, nargout, string((char*) h5read_doc))
 {
-  octave_value retval;
-#ifndef HAVE_HDF5
-        gripe_disabled_feature("h5read", "HDF5 IO");
+#if !(defined(HAVE_HDF5) && defined(HAVE_HDF5_18))
+  gripe_disabled_feature("h5read", "HDF5 IO");
+  return octave_value_list();
 #else
   int nargin = args.length();
 
@@ -114,59 +112,56 @@ DEFUN_DLD(h5read, args, nargout, string((char*) h5read_doc))
     print_usage();
     return octave_value_list();
   }
+  if ((args(0).is_string()==false) || (args(1).is_string()==false))
+  {
+    print_usage();
+    return octave_value_list();
+  }
 
   string filename = args(0).string_value();
-  string dataset = args(1).string_value();
+  string dsetname = args(1).string_value();
   if (error_state)
     return octave_value_list();
-    
-  void *olderr;
   H5E_auto_t oef;
-  
+  void *olderr;
   H5Eget_auto(H5E_DEFAULT,&oef,&olderr);
-  H5Eset_auto(H5E_DEFAULT,0,0);
-  H5File file(filename.c_str(), dataset.c_str());
-  H5Eset_auto(H5E_DEFAULT,oef,olderr);
-
-  int rank = file.get_rank();
-  if (rank < 0)
-    return octave_value_list();
-
+  // suppress hdf5 error output
+  //H5Eset_auto(H5E_DEFAULT,0,0);
+  //open the hdf5 file
+  H5File file(filename.c_str());
+  // restore old setting
+  //H5Eset_auto(H5E_DEFAULT,oef,olderr);
   if (nargin < 4)
   {
-    if (file.select_all())
-      return octave_value_list();
-  }
-  else if (rank == 0)
-  {
-    error("Cannot specify hyperslab for scalar datasets (rank 0)");
-    return octave_value_list();
+    octave_value retval = file.read_dset_complete(dsetname.c_str());
+    return retval;
   }
   else
   {
     Matrix start, count, stride, block;
     int err = 0;
+    
+    err = err || check_vec(args(2), start, "START", false);
+    start -= 1;
 
-    err = err || check_vec(args(2), start, "START", rank, false);
-    err = err || check_vec(args(3), count, "COUNT", rank, true);
+    err = err || check_vec(args(3), count, "COUNT", true);
 
-    if (nargin < 5) stride = Matrix(dim_vector(1, rank), 1);
-    else err = err || check_vec(args(4), stride, "STRIDE", rank, false);
+    if (nargin < 5)
+      stride = Matrix();
+    else
+      err = err || check_vec(args(4), stride, "STRIDE", false);
 
-    if (nargin < 6) block = Matrix(dim_vector(1, rank), 1);
-    else err = err || check_vec(args(5), block, "BLOCK", rank, false);
+    if (nargin < 6)
+      block = Matrix();
+    else
+      err = err || check_vec(args(5), block, "BLOCK", false);
 
     if (err)
       return octave_value_list();
 
-    start -= 1;
-
-    if (file.select_hyperslab(start, count, stride, block))
-      return octave_value_list();
+    return file.read_dset_hyperslab(dsetname.c_str(),
+				    start, count, stride, block, nargin-2);
   }
-  
-  retval = file.read();
 #endif
-  return retval;
 }
 

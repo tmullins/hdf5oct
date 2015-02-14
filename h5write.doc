@@ -1,0 +1,14 @@
+h5write(filename,location,dataset)
+
+Writes a matrix to the specified location in a hdf5 file.
+
+filename: name of the hdf5 file.
+location: name of the dataset or group in the hdf5 file to read.
+dataset: data matrix
+
+not yet implemented are:
+
+h5write(filename,details,dataset)
+h5write(filename,details,attribute)
+h5write(filename, details1, dataset1, details2, dataset2,...)
+h5write(filename,...,'WriteMode',mode,...)

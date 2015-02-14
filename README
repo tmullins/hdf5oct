@@ -51,28 +51,32 @@ To uninstall the package you may want to use
 
 # TODO #################################
 
--write h5write, h5create, h5writeatt. This may
- take some fairly major changes to H5File.
--read string typed datasets
--read string-array typed attributes
--document how to read complex data
--maybe use hdf5's c++ interface instead of the c interace.
--write more comprehensive tests instead of a few random choices. Also test for
- error conditions.
--test h5readatt
--test with a chunked dataset with an unlimited dimension (should just work,
- though I haven't tried it)
--modify to follow "Octave conventions" if I ever find info on what those are.
+- write h5write, h5create, h5writeatt. This may take some fairly major
+  changes to H5File.
+
+- read string typed datasets
+
+- read string-array typed attributes
+
+- document how to read complex data
+
+- maybe use hdf5's c++ interface instead of the c interace.
+
+- write more comprehensive tests instead of a few random choices. Also
+  test for error conditions.
+  
+- test h5readatt
+
+- test with a chunked dataset with an unlimited dimension (should just work,
+  though I haven't tried it)
+ 
+- make sure Fortran/C ordering is handled in a matlab compatible manner
 
 For integration into octave core:
 
 - make it really clean
 
 - get rid of the warning: doc_cache_create: unusable help text found in file 'hdf5oct'
-
-- then build it depedently based on the presence of
-  hdf5. Check if HAVE_HDF5 is true to build it or to have
-  gripe_disabled_feature (function_name, "HDF5]")
 
 - drop the HDF5 major version check you are now doing for windows.
   Instead, have a configure macro to check for features (or lack of
@@ -81,4 +85,5 @@ For integration into octave core:
   That check is done at build time, and the configure script will
   inform the user if he is building Octave without hdf5 support.
 
-  
+For debugging:
+build octave and run it with gdb (./run-octave -g). then step through the functions you want to fix

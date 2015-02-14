@@ -27,30 +27,46 @@
 
 #include <octave/oct.h>
 
-#ifdef HAVE_HDF5
+#if defined(HAVE_HDF5) && defined(HAVE_HDF5_18)
 #include <hdf5.h>
 
 class H5File
 {
+  
 public:
-  H5File(const char *filename, const char *setname);
+  
+  H5File(const char *filename);
+  
   ~H5File();
-  int get_rank() {return rank;}
-  int select_all();
-  int select_hyperslab(const Matrix& start, const Matrix& count,
-      const Matrix& stride, const Matrix& block);
-  octave_value read();
+  
+  octave_value read_dset_complete(const char *dsetname);
+  octave_value read_dset_hyperslab(const char *dsetname,
+				   const Matrix& start, const Matrix& count,
+				   const Matrix& stride, const Matrix& block,
+				   int nargin);
+
+  void write_dset(const char *location,
+		  const NDArray& data);
+  void write_att(const char *location, const char *attname,
+		 const octave_value& attvalue);
       
 private:
+  //rank of the hdf5 dataset
   int rank;
-  hsize_t *h5_dims;
-  dim_vector mat_dims;
+  //dimensions of the hdf5 dataset
+  hsize_t *h5_dims = NULL;
+
   hid_t file;
-  hid_t dataset;
-  hid_t dataspace;
-  hid_t memspace;
-  NDArray read_double();
-  ComplexNDArray read_complex();
+  hid_t dset_id;
+  hid_t dspace_id;
+  hid_t memspace_id;
+  hid_t obj_id;
+  
+  //dimensions of the returned octave matrix
+  dim_vector mat_dims;
+  
+  int open_dset(const char *dsetname);
+  octave_value read_dset();
 };
 
 bool hdf5_types_compatible (hid_t t1, hid_t t2);

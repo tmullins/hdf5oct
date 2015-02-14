@@ -23,6 +23,11 @@
 
 pkg load hdf5oct
 
+%system (sprintf ("gnome-terminal --command 'gdb -p %d'", getpid ()), "async");
+
+sleep(6);
+
+% generate testdata %%%%%%%%%%%%%%%%%%%%%%%%%mm
 dims = [4, 8, 3, 2];
 
 global d;
@@ -90,6 +95,7 @@ function check_slice(filename, rank, start=[], count=[], stride=[], block=[])
   end
 end
 
+disp("Test h5read...")
 check_slice("test.h5", 0);
 check_slice("test.h5", 1);
 check_slice("test.h5", 2);
@@ -100,3 +106,41 @@ check_slice("test.h5", 2, [1, 2], [2, 1]);
 check_slice("test.h5", 3, [1, 2, 1], [2, 1, 2], [2, 1, 1]);
 check_slice("test.h5", 3, [2, 1, 1], [2, 2, 2], [2, 3, 1], [1, 2, 1]);
 check_slice("test.h5", 4, [2, 1, 1, 2], [2, 2, 2, 1], [2, 3, 1, 3], [1, 2, 1, 1]);
+
+
+disp("Test h5write...")
+disp("1D..")
+h5write("test.h5", '/foo1', 0.1:0.1:1)
+## disp("foo1b")
+## h5write("test.h5", '/foo1b', (0.1:0.1:1)*2)
+disp("2D..")
+h5write("test.h5", '/foo2', reshape(0.1:0.1:10,[10 10]))
+disp("3D..")
+h5write("test.h5", '/foo3', reshape(0.1:0.1:100,[10 10 10]))
+disp("4D..")
+h5write("test.h5", '/foo4', reshape(0.1:0.1:1000,[10 10 10 10]))
+s=5
+h5write("test.h5", '/foo1_int', 1:s**1)
+h5write("test.h5", '/foo2_int', reshape(1:s**2, [s s]))
+h5write("test.h5", '/foo3_int', reshape(1:s**3, [s s s ]))
+h5write("test.h5", '/foo4_int', reshape(1:s**4, [s s s s]))
+				       
+
+disp("Test h5writeatt...")
+h5writeatt("test.h5", '/', 'testatt_double',12.34)
+%h5writeatt("test.h5", '/', 'testatt2_double',0.1:0.1:0.5)
+h5writeatt("test.h5", '/', 'testatt_int',7)
+%h5writeatt("test.h5", '/', 'testatt_string','hallo')
+
+h5writeatt("test.h5", '/foo1', 'testatt_double',12.34)
+h5writeatt("test.h5", '/foo1', 'testatt_int',7)
+%h5writeatt("test.h5", '/foo1', 'testatt_string','hallo')
+
+disp("Test h5readatt...")
+h5readatt("test.h5", '/', 'testatt_double')
+h5readatt("test.h5", '/', 'testatt_int')
+%h5readatt("test.h5", '/', 'testatt_string')
+
+h5readatt("test.h5", '/foo1', 'testatt_double')
+h5readatt("test.h5", '/foo1', 'testatt_int')
+%h5readatt("test.h5", '/foo1', 'testatt_string')

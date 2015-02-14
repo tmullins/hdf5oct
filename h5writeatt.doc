@@ -1,7 +1,8 @@
-data = h5readatt(filename, dsetname, attname)
+h5writeatt(filename,location,attname,attvalue)
 
-Reads attributes of an object from an hdf5 file.
+Write an attribute to an object in a HDF5 file.
 
 filename: name of the hdf5 file.
 setname : name of the dataset or group in the hdf5 file to read.
 attname: name of the attribute to read
+attvalue: data
