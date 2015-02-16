@@ -113,11 +113,18 @@ int H5File::open_dset(const char *dsetname)
   }
 
   h5_dims = (hsize_t*)malloc(rank * sizeof(hsize_t));
-  if (!h5_dims || H5Sget_simple_extent_dims(dspace_id, h5_dims, NULL) < 0)
-  {
-    error("Error allocating memory for %s", dsetname);
-    return -1;
-  }
+  if (!h5_dims)
+    {
+      error("Error allocating memory for %s", dsetname);
+      return -1;
+    }
+  if(H5Sget_simple_extent_dims(dspace_id, h5_dims, NULL) < 0)
+    {
+      error("Error determining dataset extent dimensions %s", dsetname);
+      return -1;
+    }
+  
+  return 0;
 }
 
 octave_value H5File::read_dset_complete(const char *dsetname)
@@ -125,20 +132,20 @@ octave_value H5File::read_dset_complete(const char *dsetname)
   if(open_dset(dsetname) < 0)
     return octave_value_list();
 
+  mat_dims.resize(max(rank, 2));
   // .resize(1) still leaves mat_dims with a length of 2 for some reason, so
   // we need at least 2 filled
-  mat_dims.resize(max(rank, 2));
   mat_dims(0) = mat_dims(1) = 1;
   for (int i = 0; i < rank; i++)
-  {
-    mat_dims(i) = h5_dims[i];
-  }
+    {
+      mat_dims(i) = h5_dims[i];
+    }
 
   if(H5Sselect_all(dspace_id) < 0)
   {
+    error("Error selecting complete dataset %s", dsetname);
     return octave_value_list();
   }
-  
 
   octave_value retval = read_dset();
   return retval;
@@ -262,12 +269,14 @@ octave_value H5File::read_dset()
   Matrix perm_vec(1, rank);
   if (rank >= 2)
   {
+    // reverse the elements in mat_dims
     dim_vector new_mat_dims;
     new_mat_dims.resize(rank);
     for (int i = 0; i < rank; i++)
     {
       int j = rank-i-1;
       new_mat_dims(i) = mat_dims(j);
+      
       perm_vec(i) = j;
     }
     mat_dims = new_mat_dims;
@@ -288,7 +297,7 @@ octave_value H5File::read_dset()
     if (read_result < 0)
       return octave_value_list();
     if (rank >= 2)
-      retval = retval.permute(perm_vec);
+      retval = retval.permute(perm_vec, false);
     return octave_value(retval);
   }
   else
@@ -301,7 +310,7 @@ octave_value H5File::read_dset()
     if (read_result < 0)
       return octave_value_list();
     else if (rank >= 2)
-      retval = retval.permute(perm_vec);
+      retval = retval.permute(perm_vec, false);
 
     return octave_value(retval);
   }
@@ -310,8 +319,25 @@ octave_value H5File::read_dset()
 void H5File::write_dset(const char *dsetname,
 			const NDArray& data)
 {
-  hsize_t *dims = alloc_hsize(data.dims());
-  dspace_id = H5Screate_simple(data.dims().length(), dims, NULL);
+  int rank = data.dims().length();
+  // create a dims vector where the elements are reversed with respect
+  // to the octave matrix.
+  dim_vector new_mat_dims;
+  Matrix perm_vec(1, rank);
+  new_mat_dims.resize(rank);
+  for (int i = 0; i < rank; i++)
+    {
+      int j = rank-i-1;
+      if(rank >= 2)
+	new_mat_dims(i) = data.dims()(j);
+      else
+	// this is not yet correct, a onedimensional matrix is transposed
+	new_mat_dims(i) = data.dims()(i);
+      
+      perm_vec(i) = j;
+    }
+  hsize_t *dims = alloc_hsize(new_mat_dims);
+  dspace_id = H5Screate_simple(rank, dims, NULL);
 
   if(H5Lexists(file,dsetname,H5P_DEFAULT))
   {
@@ -323,10 +349,18 @@ void H5File::write_dset(const char *dsetname,
   else
     dset_id = H5Dcreate(file, dsetname, H5T_NATIVE_DOUBLE, dspace_id,
 			H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  
-  H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
-	   H5S_ALL, H5S_ALL, H5P_DEFAULT,
-	   data.fortran_vec());
+  if(rank >= 2)
+    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
+	     H5S_ALL, H5S_ALL, H5P_DEFAULT,
+	     data.permute(perm_vec,true).fortran_vec());
+  else
+    // this is not yet correct, a onedimensional matrix is transposed
+    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
+	     H5S_ALL, H5S_ALL, H5P_DEFAULT,
+	     data.fortran_vec());
+
+
+  free(dims);
 }
 
 void H5File::write_att(const char *location, const char *attname,

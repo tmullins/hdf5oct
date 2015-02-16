@@ -114,7 +114,7 @@ disp("Test h5write and h5read...")
 function check_dset(location, data)
 	 atttype = evalin("caller",["typeinfo(",data,")"]);
 	 attclass = evalin("caller",["class(",data,")"]);
-	 printf(["write ",attclass," ",atttype," dataset..."])
+	 printf(["write ",num2str(ndims(evalin("caller",data))),"d ",attclass," ",atttype," dataset..."])
 	 h5write("test.h5", location,evalin("caller", data));
 	 printf("and read it..")
 	 readdata = h5read("test.h5", location);
@@ -124,24 +124,30 @@ function check_dset(location, data)
 	   %% this condition is not properly formulated
 	   disp("ok")
 	 else
-	   disp("failed, not equal")
-	   disp(readdata - evalin("caller", data));
+	   ## disp("failed, diff:")
+	   ## disp(readdata - evalin("caller", data));
+	   disp("ref:")
 	   disp(evalin("caller", data));
+	   disp("data read from file:")
 	   disp(readdata)
 	 end
 end
 
-s=5;
-matrix = 1:s**1;
+s=5
+range = 1:s**1;
+%check_dset('/foo1_range_int', "range")
+matrix = reshape(cast(range,'int64'), length(range),1)
 check_dset('/foo1_int', "matrix")
-matrix = reshape(1:s**2, [s s]);
+matrix = reshape(cast(1:s**2,'int64'), [s s]);
 check_dset('/foo2_int', "matrix")
-matrix =reshape(1:s**3, [s s s]);
+matrix =reshape(cast(1:s**3,'int64'), [s s s]);
 check_dset('/foo3_int', "matrix")
-matrix =reshape(1:s**4, [s s s s]);
+matrix =reshape(cast(1:s**4,'int64'), [s s s s]);
 check_dset('/foo4_int', "matrix")
 
-matrix =(1:s**1)*0.1;
+range =(1:s**1)*0.1;
+%check_dset('/foo1_double', "range")
+matrix = reshape(range, length(range),1);
 check_dset('/foo1_double', "matrix")
 matrix =reshape((1:s**2)*0.1, [s s]);
 check_dset('/foo2_double', "matrix")
