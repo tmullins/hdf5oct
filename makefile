@@ -31,7 +31,7 @@ h5writeatt.o: h5writeatt.doc.h
 	xxd -i $< | sed 's/\(0x..\)$$/\1, 0x00/' > $@
 
 clean:
-	rm -f *.o *.oct *.doc.h package/inst/* $(testobjs) write_test test.h5 $(PACKAGEFILE)
+	rm -f *.o *.oct *.doc.h package/inst/* $(testobjs) test/write_test test/test.h5 $(PACKAGEFILE)
 
 install: $(PACKAGEFILE)
 	@echo "-- Install Octave Package ------------"
@@ -58,6 +58,6 @@ test/write_test: test/write_test.cpp
 # a target to test the octave functions
 test: test/write_test
 	@echo "-- Perform Tests --------------"
-	rm test/test.h5
+	rm -f test/test.h5
 	cd test && ./write_test
 	cd test && octave --silent --no-gui h5test.m

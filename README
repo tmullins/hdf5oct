@@ -20,8 +20,8 @@ provides only few functions:
  	    integer, string).
 
  h5write: Writes a floating point or integer matrix to a dataset. This
-          will overwrites existing datasets, it cannot yet append to
-          data.
+          will overwrite an already existing dataset, it cannot yet
+          append data.
 
  h5writeatt: Attach a scalar floating point attribute to an object.
 
@@ -50,7 +50,7 @@ You can try running
     make test
 
 
-# INSTALLATION #########################
+# DEINSTALLATION #########################
 
 To uninstall the package you may want to use
 

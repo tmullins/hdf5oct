@@ -322,7 +322,7 @@ void H5File::write_dset(const char *dsetname,
   }
   else
     dset_id = H5Dcreate(file, dsetname, H5T_NATIVE_DOUBLE, dspace_id,
-		      H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+			H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   
   H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
 	   H5S_ALL, H5S_ALL, H5P_DEFAULT,
@@ -341,38 +341,59 @@ void H5File::write_att(const char *location, const char *attname,
   {
     error("matrix types are not yet supported.");
     return;
-    dims = alloc_hsize(attvalue.dims());
-    dspace_id = H5Screate_simple(attvalue.dims().length(), dims, NULL);
+    // dims = alloc_hsize(attvalue.dims());
+    // dspace_id = H5Screate_simple(attvalue.dims().length(), dims, NULL);
   }
   else
   {
     error("Only scalar or matrix types are supported.");
     return;
   }
-  hid_t obj_id = H5Oopen(file, location, H5P_DEFAULT);
+  obj_id = H5Oopen(file, location, H5P_DEFAULT);
 
+  hid_t attr_id;
+  hid_t type_id;
+  hid_t mem_type_id;
+  void* buf;
+  double attval_double;
+  int attval_int;
+    
   if(attvalue.is_real_type())
-  {
-    //error("writing real attributes is not yet supported");
-    hid_t attr_id = H5Acreate(obj_id, attname, H5T_IEEE_F64LE,
-			      dspace_id, H5P_DEFAULT, H5P_DEFAULT);
-    double val = attvalue.double_value();
-    herr_t status = H5Awrite(attr_id, H5T_NATIVE_DOUBLE,
-    			     &val);
-    H5Aclose(attr_id);
-  }
+    {
+      type_id = H5Tcopy(H5T_IEEE_F64LE);
+      mem_type_id = H5Tcopy(H5T_NATIVE_DOUBLE);
+      attval_double = attvalue.double_value();
+      buf = (void *) &attval_double;
+    }
   else if(attvalue.is_complex_type())
-  {
-    error("writing complex attributes is not yet supported");
-  }
+    {
+      error("writing complex attributes is not yet supported");
+    }
   else if(attvalue.is_integer_type())
-  {
-    error("writing integer attributes is not yet supported");
-  }
+    {
+      type_id = H5Tcopy(H5T_STD_I64LE);
+      mem_type_id = H5Tcopy(H5T_NATIVE_INT);
+      attval_int = attvalue.int_value();
+      buf = (void *) &attval_int;
+    }
   else if(attvalue.is_string())
-  {
-    error("writing string attributes is not yet supported");
-  }
+    {
+      error("writing string attributes is not yet supported");
+    }
+
+  if(H5Aexists(obj_id,attname))
+    {
+      attr_id = H5Aopen(obj_id, attname, H5P_DEFAULT);
+    }
+  else
+    {
+      attr_id = H5Acreate(obj_id, attname, type_id,
+			  dspace_id, H5P_DEFAULT, H5P_DEFAULT);
+    }
+  herr_t status = H5Awrite(attr_id, mem_type_id, buf);
+  H5Aclose(attr_id);
+  H5Tclose(type_id);
+  H5Tclose(mem_type_id);
 }
 
 bool hdf5_types_compatible (hid_t t1, hid_t t2)

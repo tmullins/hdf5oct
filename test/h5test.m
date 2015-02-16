@@ -1,7 +1,7 @@
 %{
 
     Copyright 2012 Tom Mullins
-
+    Copyright 2015 Tom Mullins, Stefan Großhauser
 
     This file is part of hdf5oct.
 
@@ -23,6 +23,7 @@
 
 pkg load hdf5oct
 
+% for debugging:
 %system (sprintf ("gnome-terminal --command 'gdb -p %d'", getpid ()), "async");
 
 sleep(6);
@@ -95,7 +96,7 @@ function check_slice(filename, rank, start=[], count=[], stride=[], block=[])
   end
 end
 
-disp("Test h5read...")
+disp("Test h5read hyperslabs...")
 check_slice("test.h5", 0);
 check_slice("test.h5", 1);
 check_slice("test.h5", 2);
@@ -108,39 +109,87 @@ check_slice("test.h5", 3, [2, 1, 1], [2, 2, 2], [2, 3, 1], [1, 2, 1]);
 check_slice("test.h5", 4, [2, 1, 1, 2], [2, 2, 2, 1], [2, 3, 1, 3], [1, 2, 1, 1]);
 
 
-disp("Test h5write...")
-disp("1D..")
-h5write("test.h5", '/foo1', 0.1:0.1:1)
-## disp("foo1b")
-## h5write("test.h5", '/foo1b', (0.1:0.1:1)*2)
-disp("2D..")
-h5write("test.h5", '/foo2', reshape(0.1:0.1:10,[10 10]))
-disp("3D..")
-h5write("test.h5", '/foo3', reshape(0.1:0.1:100,[10 10 10]))
-disp("4D..")
-h5write("test.h5", '/foo4', reshape(0.1:0.1:1000,[10 10 10 10]))
-s=5
-h5write("test.h5", '/foo1_int', 1:s**1)
-h5write("test.h5", '/foo2_int', reshape(1:s**2, [s s]))
-h5write("test.h5", '/foo3_int', reshape(1:s**3, [s s s ]))
-h5write("test.h5", '/foo4_int', reshape(1:s**4, [s s s s]))
-				       
+disp("Test h5write and h5read...")
 
-disp("Test h5writeatt...")
-h5writeatt("test.h5", '/', 'testatt_double',12.34)
-%h5writeatt("test.h5", '/', 'testatt2_double',0.1:0.1:0.5)
-h5writeatt("test.h5", '/', 'testatt_int',7)
-%h5writeatt("test.h5", '/', 'testatt_string','hallo')
+function check_dset(location, data)
+	 atttype = evalin("caller",["typeinfo(",data,")"]);
+	 attclass = evalin("caller",["class(",data,")"]);
+	 printf(["write ",attclass," ",atttype," dataset..."])
+	 h5write("test.h5", location,evalin("caller", data));
+	 printf("and read it..")
+	 readdata = h5read("test.h5", location);
+	 if(all(readdata == evalin("caller", data)))
+	   disp("ok")
+	 elseif(isna(evalin("caller", data)) && isna(readdata))
+	   %% this condition is not properly formulated
+	   disp("ok")
+	 else
+	   disp("failed, not equal")
+	   disp(readdata - evalin("caller", data));
+	   disp(evalin("caller", data));
+	   disp(readdata)
+	 end
+end
 
-h5writeatt("test.h5", '/foo1', 'testatt_double',12.34)
-h5writeatt("test.h5", '/foo1', 'testatt_int',7)
-%h5writeatt("test.h5", '/foo1', 'testatt_string','hallo')
+s=5;
+matrix = 1:s**1;
+check_dset('/foo1_int', "matrix")
+matrix = reshape(1:s**2, [s s]);
+check_dset('/foo2_int', "matrix")
+matrix =reshape(1:s**3, [s s s]);
+check_dset('/foo3_int', "matrix")
+matrix =reshape(1:s**4, [s s s s]);
+check_dset('/foo4_int', "matrix")
 
-disp("Test h5readatt...")
-h5readatt("test.h5", '/', 'testatt_double')
-h5readatt("test.h5", '/', 'testatt_int')
-%h5readatt("test.h5", '/', 'testatt_string')
+matrix =(1:s**1)*0.1;
+check_dset('/foo1_double', "matrix")
+matrix =reshape((1:s**2)*0.1, [s s]);
+check_dset('/foo2_double', "matrix")
+matrix =reshape((1:s**3)*0.1, [s s s]);
+check_dset('/foo3_double', "matrix")
+matrix =reshape((1:s**4)*0.1, [s s s s]);
+check_dset('/foo4_double', "matrix")
 
-h5readatt("test.h5", '/foo1', 'testatt_double')
-h5readatt("test.h5", '/foo1', 'testatt_int')
-%h5readatt("test.h5", '/foo1', 'testatt_string')
+
+disp("Test h5writeatt and h5readatt...")
+
+function check_att(location, att)
+	 atttype = evalin("caller",["typeinfo(",att,")"]);
+	 attclass = evalin("caller",["class(",att,")"]);
+	 printf(["write ",attclass," ",atttype," attribute..."])
+	 h5writeatt("test.h5", location, att,evalin("caller", att));
+	 printf("and read it..")
+	 readval = h5readatt("test.h5", location, att);
+	 if(all(readval == evalin("caller", att)))
+	   disp("ok")
+	 elseif(isna(evalin("caller", att)) && isna(readval))
+	   disp("ok")
+	 else
+	   disp("failed, not equal")
+	   disp(evalin("caller", att));
+	   disp(readval)
+	 end
+end
+  
+testatt_double = 12.34567;
+check_att("/","testatt_double")
+% check writing to an existing attribute of the same type
+testatt_double *= 10;
+check_att("/","testatt_double")
+
+testatt_double_NA = NA;
+check_att("/","testatt_double_NA")
+
+testatt2_double = reshape(0.1:0.1:0.5, [5, 1]);
+%check_att("/","testatt2_double")
+
+testatt_int = cast(7,'int64')
+check_att("/","testatt_int")
+% check writing to an existing attribute of a different
+testatt_int = 7.5;
+check_att("/","testatt_int")
+
+testatt_string = 'hallo';
+%check_att("/","testatt_string")
+
+
