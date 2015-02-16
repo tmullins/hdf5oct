@@ -19,7 +19,14 @@ provides only few functions:
  	    to read scalar HDF5 attributes of some types (float,
  	    integer, string).
 
-Note that only few of the HDF5 datatypes are supported by hdf5oct.
+ h5write: Writes a floating point or integer matrix to a dataset. This
+          will overwrites existing datasets, it cannot yet append to
+          data.
+
+ h5writeatt: Attach a scalar floating point attribute to an object.
+
+Note that only few of the HDF5 datatypes are supported by hdf5oct at
+the moment.
 
 # INSTALLATION #########################
 
@@ -51,8 +58,9 @@ To uninstall the package you may want to use
 
 # TODO #################################
 
-- write h5write, h5create, h5writeatt. This may take some fairly major
-  changes to H5File.
+- complete h5write, h5writeatt, write h5create, h5info
+
+- allow to append to data, using the matlab syntax
 
 - read string typed datasets
 
@@ -65,8 +73,6 @@ To uninstall the package you may want to use
 - write more comprehensive tests instead of a few random choices. Also
   test for error conditions.
   
-- test h5readatt
-
 - test with a chunked dataset with an unlimited dimension (should just work,
   though I haven't tried it)
  
@@ -76,14 +82,3 @@ For integration into octave core:
 
 - make it really clean
 
-- get rid of the warning: doc_cache_create: unusable help text found in file 'hdf5oct'
-
-- drop the HDF5 major version check you are now doing for windows.
-  Instead, have a configure macro to check for features (or lack of
-  them).
-  https://github.com/stegro/hdf5oct/blob/master/h5readatt.cpp#L42
-  That check is done at build time, and the configure script will
-  inform the user if he is building Octave without hdf5 support.
-
-For debugging:
-build octave and run it with gdb (./run-octave -g). then step through the functions you want to fix
