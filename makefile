@@ -1,8 +1,8 @@
 CXX=h5c++
-src= h5write.cpp h5writeatt.cpp h5read.cpp h5readatt.cpp
-headers=h5file.h
+src= h5read.cpp
+headers=h5read.h
 octs=$(src:.cpp=.oct)
-objs=$(src:.cpp=.o) h5file.o
+objs=$(src:.cpp=.o)
 testobjs=test/write_test.o
 docs=$(src:.cpp=.doc)
 hdrs=$(docs:.doc=.doc.h)
@@ -15,11 +15,7 @@ PACKAGEFILE=hdf5oct-$(VERSION).tar.gz
 
 all: $(octs) package
 
-h5file.o:
-h5read.o: h5read.doc.h
-h5readatt.o: h5readatt.doc.h
-h5write.o: h5write.doc.h
-h5writeatt.o: h5writeatt.doc.h
+h5read.o: h5read.doc.h h5readatt.doc.h h5write.doc.h h5writeatt.doc.h
 
 %.oct: $(objs)
 	$(MKOCTFILE) -o $@ $(objs)
