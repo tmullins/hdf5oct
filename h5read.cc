@@ -1,7 +1,7 @@
 /*
  *
  *    Copyright 2012 Tom Mullins
- *    Copyright 2015 Tom Mullins, Stefan Großhauser
+ *    Copyright 2015 Tom Mullins, Thorsten Liebig, Stefan Großhauser
  *
  *
  *    This file is part of hdf5oct.
@@ -392,8 +392,15 @@ H5File::~H5File()
   if(H5Iis_valid(obj_id))
     H5Oclose(obj_id);
 
+  if(H5Iis_valid(type_id))
+    H5Tclose(type_id);
+  
+  if(H5Iis_valid(mem_type_id))
+    H5Tclose(mem_type_id);
+
   if(H5Iis_valid(file))
     H5Fclose(file);
+
 
   if (h5_dims != NULL)
     {
@@ -587,7 +594,7 @@ octave_value
 H5File::read_dset()
 {
   bool is_cmplx = false;
-  hid_t type_id = H5Dget_type(dset_id);
+  type_id = H5Dget_type(dset_id);
   hid_t type_class_id = H5Tget_class(type_id);
   
   if (type_class_id == H5T_COMPOUND)
@@ -670,6 +677,7 @@ H5File::write_dset(const char *dsetname,
     }
   hsize_t *dims = alloc_hsize(new_mat_dims);
   dspace_id = H5Screate_simple(rank, dims, NULL);
+  free(dims);
 
   //check if all groups in the path dsetname exist. if not, create them
   string path(dsetname);
@@ -697,18 +705,22 @@ H5File::write_dset(const char *dsetname,
   else
     dset_id = H5Dcreate(file, dsetname, H5T_NATIVE_DOUBLE, dspace_id,
 			H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  herr_t status;
   if(rank >= 2)
-    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
+    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
 	     H5S_ALL, H5S_ALL, H5P_DEFAULT,
 	     data.permute(perm_vec,true).fortran_vec());
   else
     // this is not yet correct, a onedimensional matrix is transposed
-    H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
+    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
 	     H5S_ALL, H5S_ALL, H5P_DEFAULT,
 	     data.fortran_vec());
+  if(status < 0)
+    {
+      error("error when writing the dataset %s", dsetname);
+      return;
+    }
 
-
-  free(dims);
 }
 
 octave_value
@@ -842,6 +854,7 @@ H5File::write_att(const char *location, const char *attname,
       return;
       // dims = alloc_hsize(attvalue.dims());
       // dspace_id = H5Screate_simple(attvalue.dims().length(), dims, NULL);
+      // free(dims);
     }
   else
     {
@@ -879,9 +892,6 @@ H5File::write_att(const char *location, const char *attname,
       return;
     }
 
-  hid_t attr_id;
-  hid_t type_id;
-  hid_t mem_type_id;
   void* buf;
   double attval_double;
   int attval_int;
@@ -924,17 +934,19 @@ You have to save real and imag part separately.");
 
   if(H5Aexists(obj_id,attname))
     {
-      attr_id = H5Aopen(obj_id, attname, H5P_DEFAULT);
+      att_id = H5Aopen(obj_id, attname, H5P_DEFAULT);
     }
   else
     {
-      attr_id = H5Acreate(obj_id, attname, type_id,
+      att_id = H5Acreate(obj_id, attname, type_id,
 			  dspace_id, H5P_DEFAULT, H5P_DEFAULT);
     }
-  herr_t status = H5Awrite(attr_id, mem_type_id, buf);
-  H5Aclose(attr_id);
-  H5Tclose(type_id);
-  H5Tclose(mem_type_id);
+  herr_t status = H5Awrite(att_id, mem_type_id, buf);
+  if(status < 0)
+    {
+      error("error when writing the attribute %s at %s", attname, location);
+      return;
+    }
 }
 
 bool

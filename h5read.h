@@ -63,6 +63,8 @@ private:
   hid_t memspace_id;
   hid_t obj_id;
   hid_t att_id;
+  hid_t type_id;
+  hid_t mem_type_id;
 
   
   //dimensions of the returned octave matrix
