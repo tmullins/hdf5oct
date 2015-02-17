@@ -143,7 +143,7 @@ end
 s=5
 range = 1:s**1;
 %check_dset('/foo1_range_int', "range")
-matrix = reshape(cast(range,'int64'), length(range),1)
+matrix = reshape(cast(range,'int64'), length(range),1);
 check_dset('/foo1_int', "matrix")
 matrix = reshape(cast(1:s**2,'int64'), [s s]);
 check_dset('/foo2_int', "matrix")
@@ -202,9 +202,15 @@ testatt2_double = reshape(0.1:0.1:0.5, [5, 1]);
 
 testatt_int = cast(7,'int64')
 check_att("/","testatt_int")
-% check writing to an existing attribute of a different
+% check writing to an existing attribute of a different type
 testatt_int = 7.5;
 check_att("/","testatt_int")
+
+testatt_string = 'hallo';
+check_att("/","testatt_string")
+% check overwriting a string attribute
+testatt_string = 'buona sera!';
+check_att("/","testatt_string")
 
 disp("write to nonexisting file...")
 h5write("test2.h5","/foo/bar/test",reshape(1:27,[3 3 3]));
@@ -225,8 +231,7 @@ catch
 end
 
 try
-  testatt_string = 'hallo';
-  check_att("/","testatt_string")
+  data = h5writeatt("test.h5","/nonexisting","testkey","testval")
 catch
   disp(["error catched: ", lasterror.message])
 end

@@ -738,7 +738,52 @@ H5File::read_att(const char *objname, const char *attname)
     }
 
   size_t numVal = H5Aget_storage_size(att_id)/H5Tget_size(type);
-  if (H5Tget_class(type) == H5T_FLOAT)
+  if (H5Tget_class(type)==H5T_STRING)
+    {
+      // Size of each string:
+      size_t size = H5Tget_size(type);
+      // to read an array of strings (for future work): 
+      //totsize = size*sdim[0]*sdim[1];
+      // to read a single string:
+      size_t totsize = size;
+      // Set up read buffer for attribute
+      char* buf = (char*)calloc(totsize, sizeof(char));
+      if (H5Aread(att_id, type, buf)<0)
+	{
+	  error("h5readatt: reading the given string Attribute failed");
+	  return retval;
+	}
+      retval = octave_value(buf);
+    }
+  else if (H5Tget_class(type)==H5T_INTEGER)
+    {
+      // Integer attributes are casted to floating point octave values
+    
+      double value[numVal];
+      if (H5Tget_size(type)==sizeof(int))
+	{
+	  int f_value[numVal];
+	  if (H5Aread(att_id, H5T_NATIVE_INT, f_value)<0)
+	    {
+	      error("h5readatt: reading the given integer Attribute failed");
+	      return retval;
+	    }
+	  for (size_t n=0;n<numVal;++n)
+	    value[n] = f_value[n]*1.0;
+	}
+      else
+	{
+	  error("h5readatt: reading the given integer Attribute failed: cannot handle size of type");
+	  return retval;
+	}
+
+      Matrix mat(numVal,1);
+      for (size_t n=0;n<numVal;++n)
+	mat(n)=value[n];
+      retval = octave_value(mat);
+    
+    }
+  else if (H5Tget_class(type) == H5T_FLOAT)
     {
       double value[numVal];
       if (H5Tget_size(type) == sizeof(float))
@@ -773,51 +818,6 @@ cannot handle size of type");
       retval = octave_value(mat);
 
     }
-  else if (H5Tget_class(type)==H5T_INTEGER)
-    {
-      // Integer attributes are casted to floating point octave values
-    
-      double value[numVal];
-      if (H5Tget_size(type)==sizeof(int))
-	{
-	  int f_value[numVal];
-	  if (H5Aread(att_id, H5T_NATIVE_INT, f_value)<0)
-	    {
-	      error("h5readatt: reading the given integer Attribute failed");
-	      return retval;
-	    }
-	  for (size_t n=0;n<numVal;++n)
-	    value[n] = f_value[n]*1.0;
-	}
-      else
-	{
-	  error("h5readatt: reading the given integer Attribute failed: cannot handle size of type");
-	  return retval;
-	}
-
-      Matrix mat(numVal,1);
-      for (size_t n=0;n<numVal;++n)
-	mat(n)=value[n];
-      retval = octave_value(mat);
-    
-    }
-  else if (H5Tget_class(type)==H5T_STRING)
-    {
-      // Size of each string:
-      size_t size = H5Tget_size(type);
-      // to read an array of strings (for future work): 
-      //totsize = size*sdim[0]*sdim[1];
-      // to read a single string:
-      size_t totsize = size;
-      // Set up read buffer for attribute
-      char* buf = (char*)calloc(totsize, sizeof(char));
-      if (H5Aread(att_id, type, buf)<0)
-	{
-	  error("h5readatt: reading the given string Attribute failed");
-	  return retval;
-	}
-      retval = octave_value(buf);
-    }
   else //none of the supported data types
     {
       error("h5readatt: attribute type not supported");
@@ -832,7 +832,7 @@ H5File::write_att(const char *location, const char *attname,
 		       const octave_value& attvalue)
 {
   hsize_t *dims;
-  if(attvalue.is_scalar_type())
+  if(attvalue.is_scalar_type() || attvalue.is_string())
     {
       dspace_id = H5Screate(H5S_SCALAR);
     }
@@ -848,7 +848,36 @@ H5File::write_att(const char *location, const char *attname,
       error("Only scalar attributes are supported at the moment.");
       return;
     }
+
+  //H5Lexists returns false for the root group '/'
+  if(strcmp(location,"/")!=0 && !H5Lexists(file, location, H5P_DEFAULT))
+    {
+      error("the specified HDF5 object %s does not exist", location);
+      return;
+    }
   obj_id = H5Oopen(file, location, H5P_DEFAULT);
+  if(obj_id < 0)
+    {
+      error("the specified HDF5 object %s could not be opened", location);
+      return;
+    }
+  
+  //Check if an attribute with the given name exists already at that
+  //object and if yes delete it.
+  htri_t exists = H5Aexists(obj_id, attname);
+  if(exists > 0)
+    {
+      if(H5Adelete(obj_id, attname) < 0)
+	{
+	  error("could not delete existing attribute %s at %s", attname, location);
+	  return;
+	}
+    }
+  else if(exists < 0)
+    {
+      error("could not check if attribute %s exists at %s", attname, location);
+      return;
+    }
 
   hid_t attr_id;
   hid_t type_id;
@@ -856,8 +885,25 @@ H5File::write_att(const char *location, const char *attname,
   void* buf;
   double attval_double;
   int attval_int;
-    
-  if(attvalue.is_real_type())
+
+   if(attvalue.is_string())
+    {
+      type_id = H5Tcopy(H5T_C_S1);
+      H5Tset_size(type_id, attvalue.string_value().length());
+      H5Tset_strpad(type_id,H5T_STR_NULLTERM);
+      mem_type_id = H5Tcopy(type_id);
+      
+      buf = (void *) attvalue.string_value().c_str();
+    }
+  else if(attvalue.is_integer_type())
+    {
+      //type_id = H5Tcopy(H5T_STD_I64LE); //cannot read this back in then, don't know why
+      type_id = H5Tcopy(H5T_NATIVE_INT);
+      mem_type_id = H5Tcopy(H5T_NATIVE_INT);
+      attval_int = attvalue.int_value();
+      buf = (void *) &attval_int;
+    }
+   else if(attvalue.is_real_type())
     {
       type_id = H5Tcopy(H5T_IEEE_F64LE);
       mem_type_id = H5Tcopy(H5T_NATIVE_DOUBLE);
@@ -866,19 +912,13 @@ H5File::write_att(const char *location, const char *attname,
     }
   else if(attvalue.is_complex_type())
     {
-      error("writing complex attributes is not yet supported");
+      error("complex values are not supported by the HDF5 format. \
+You have to save real and imag part separately.");
       return;
     }
-  else if(attvalue.is_integer_type())
+  else
     {
-      type_id = H5Tcopy(H5T_STD_I64LE);
-      mem_type_id = H5Tcopy(H5T_NATIVE_INT);
-      attval_int = attvalue.int_value();
-      buf = (void *) &attval_int;
-    }
-  else if(attvalue.is_string())
-    {
-      error("writing string attributes is not yet supported");
+      error("this variable type is not supported");
       return;
     }
 
