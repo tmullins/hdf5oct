@@ -1,11 +1,9 @@
 CXX=h5c++
-src= h5read.cpp
+src= h5read.cc
 headers=h5read.h
-octs=$(src:.cpp=.oct)
-objs=$(src:.cpp=.o)
+octs=$(src:.cc=.oct)
+objs=$(src:.cc=.o)
 testobjs=test/write_test.o
-docs=$(src:.cpp=.doc)
-hdrs=$(docs:.doc=.doc.h)
 MKOCTFILE=CXX=$(CXX) mkoctfile -g
 
 VERSION=0.2.0
@@ -15,19 +13,14 @@ PACKAGEFILE=hdf5oct-$(VERSION).tar.gz
 
 all: $(octs) package
 
-h5read.o: h5read.doc.h h5readatt.doc.h h5write.doc.h h5writeatt.doc.h
-
 %.oct: $(objs)
 	$(MKOCTFILE) -o $@ $(objs)
 
-%.o: %.cpp $(headers)
+%.o: %.cc $(headers)
 	$(MKOCTFILE) -c $<
 
-%.doc.h: %.doc
-	xxd -i $< | sed 's/\(0x..\)$$/\1, 0x00/' > $@
-
 clean:
-	rm -f *.o *.oct *.doc.h package/inst/* $(testobjs) test/write_test test/test.h5 $(PACKAGEFILE)
+	rm -f *.o *.oct package/inst/* $(testobjs) test/write_test test/test.h5 $(PACKAGEFILE)
 
 install: $(PACKAGEFILE)
 	@echo "-- Install Octave Package ------------"
@@ -48,7 +41,7 @@ $(PACKAGEFILE): $(octs)
 # TESTING ###########
 
 # a minimal program to generate some testdata
-test/write_test: test/write_test.cpp
+test/write_test: test/write_test.cc
 	$(CXX) -o $@ $< -lhdf5
 
 # a target to test the octave functions

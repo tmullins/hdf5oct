@@ -1,7 +1,0 @@
-data = h5readatt(filename, dsetname, attname)
-
-Reads attributes of an object from an hdf5 file.
-
-filename: name of the hdf5 file.
-setname : name of the dataset or group in the hdf5 file to read.
-attname: name of the attribute to read

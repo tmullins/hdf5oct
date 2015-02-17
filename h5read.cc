@@ -35,8 +35,6 @@
 #include <string>
 #include "gripes.h"
 
-#include "h5read.doc.h"
-#include "h5readatt.doc.h"
 #include "h5write.doc.h"
 #include "h5writeatt.doc.h"
 
@@ -106,7 +104,38 @@ int check_vec(const octave_value& val, Matrix& mat/*out*/,
 
 #endif
 
-DEFUN_DLD(h5read, args, nargout, string((char*) h5read_doc))
+DEFUN_DLD(h5read, args, nargout,
+	  "-*- texinfo -*-\n\
+@deftypefn {Loadable Function} {@var{data} =} h5read (@var{filename}, @var{dsetname})\n\
+@deftypefnx {Loadable Function} {@var{data} =} h5read (@var{filename}, @var{dsetname}, @var{start}, @var{count})\n\
+@deftypefnx {Loadable Function} {@var{data} =} h5read (@var{filename}, @var{dsetname}, @var{start}, @var{count}, @var{stride})\n\
+@deftypefnx {Loadable Function} {@var{data} =} h5read (@var{filename}, @var{dsetname}, @var{start}, @var{count}, @var{stride}, @var{block})\n\
+Read a hyperslab of data from an HDF5 file specified by its @var{filename}. \n\
+The datatype will be coerced to double.\n\
+For example:\n\
+\n\
+@example\n\
+@group\n\
+data = h5read (\"mydata.h5\", \"/grid/time\");\n\
+@end group\n\
+@end example\n\
+\n\
+The variable @var{dsetname} is the name of the dataset in the HDF5\n\
+file to read. It has to be specified by its absolute path (or relative\n\
+to the root group / ).\n\
+\n\
+The other four arguments are 1xn or nx1 matrices, where n is the number of dimensions\n\
+in the dataset. If all are omitted, the entire dataset will be read.\n\
+\n\
+@var{start} is a 1-based starting offset\n\
+@var{count} is the number of blocks to read. If 0 or Inf\n\
+is specified in any dimension, as many blocks as possible \n\
+are read in that dimension.\n\
+@var{stride} is the offset between the start of each block. \n\
+Defaults to a vector of ones.\n\
+@var{block} is the size of each block to read. Defaults to a vector of ones.\n\
+@seealso{h5write}\n\
+@end deftypefn")
 {
 #if !(defined(HAVE_HDF5) && defined(HAVE_HDF5_18))
   gripe_disabled_feature("h5read", "HDF5 IO");
@@ -172,7 +201,17 @@ DEFUN_DLD(h5read, args, nargout, string((char*) h5read_doc))
 #endif
 }
 
-DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
+DEFUN_DLD (h5readatt, args, nargout,
+	   "-*- texinfo -*-\n\
+@deftypefn {Loadable Function} {@var{data} =} h5readatt (@var{filename}, @var{objectname}, @var{attname})\n\
+\n\
+Reads one attribute of an object from an HDF5 file, specified by the\n\
+@var{filename} and the @var{objectname}.\n\
+The third argument @var{attname} is the name of the attribute which \n\
+is to read.\n\
+\n\
+@seealso{h5writeatt}\n\
+@end deftypefn")
 {
   octave_value retval;
 #if !(defined(HAVE_HDF5) && defined(HAVE_HDF5_18))
@@ -358,7 +397,15 @@ DEFUN_DLD (h5readatt, args, nargout, string((char*) h5readatt_doc))
 }
 
 
-DEFUN_DLD(h5write, args, nargout, string((char*) h5write_doc))
+DEFUN_DLD(h5write, args, nargout,
+	  "-*- texinfo -*-\n\
+@deftypefn {Loadable Function} h5write (@var{filename}, @var{dsetname}, @var{data})\n\
+\n\
+Write a matrix @var{data} to the specified location @var{dsetname} in \n\
+a HDF5 file specified by @var{filename}.\n\
+\n\
+@seealso{h5read}\n\
+@end deftypefn")
 {
 #if !(defined(HAVE_HDF5) && defined(HAVE_HDF5_18))
   gripe_disabled_feature("h5write", "HDF5 IO");
@@ -401,7 +448,15 @@ DEFUN_DLD(h5write, args, nargout, string((char*) h5write_doc))
 }
 
 
-DEFUN_DLD(h5writeatt, args, nargout, string((char*) h5writeatt_doc))
+DEFUN_DLD(h5writeatt, args, nargout,
+	  "-*- texinfo -*-\n\
+@deftypefn {Loadable Function} h5writeatt (@var{filename}, @var{objectname}, @var{attname}, @var{attvalue})\n\
+\n\
+Write an attribute with name @var{attname} and value @var{attvalue} to\n\
+the object named @var{objectname} in the HDF5 file specified by @var{filename}.\n\
+\n\
+@seealso{h5readatt}\n\
+@end deftypefn")
 {
 #if !(defined(HAVE_HDF5) && defined(HAVE_HDF5_18))
   gripe_disabled_feature("h5writeatt", "HDF5 IO");

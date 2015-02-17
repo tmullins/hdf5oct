@@ -23,12 +23,17 @@
 
 pkg load hdf5oct
 
+disp("------------ test help strings: ----------------")
+help h5read
+help h5write
+help h5readatt
+help h5writeatt
+
 % for debugging:
 %system (sprintf ("gnome-terminal --command 'gdb -p %d'", getpid ()), "async");
 
-sleep(6);
+disp("------------ generate testdata: ----------------")
 
-% generate testdata %%%%%%%%%%%%%%%%%%%%%%%%%mm
 dims = [4, 8, 3, 2];
 
 global d;
@@ -95,6 +100,8 @@ function check_slice(filename, rank, start=[], count=[], stride=[], block=[])
     printf('Failed\n');
   end
 end
+
+disp("------------ test functionality: ----------------")
 
 disp("Test h5read hyperslabs...")
 check_slice("test.h5", 0);

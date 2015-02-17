@@ -1,8 +1,0 @@
-h5writeatt(filename,location,attname,attvalue)
-
-Write an attribute to an object in a HDF5 file.
-
-filename: name of the hdf5 file.
-setname : name of the dataset or group in the hdf5 file to read.
-attname: name of the attribute to read
-attvalue: data
