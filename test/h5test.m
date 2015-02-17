@@ -210,3 +210,9 @@ testatt_string = 'hallo';
 %check_att("/","testatt_string")
 
 
+disp("------------ test failures and wrong arguments: ----------------")
+try
+  data = h5read("nonexistingfile.h5","/foo")
+catch
+  disp(["error catched: ", lasterror.message])
+end

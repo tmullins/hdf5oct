@@ -159,15 +159,12 @@ Defaults to a vector of ones.\n\
   string dsetname = args(1).string_value();
   if (error_state)
     return octave_value_list();
-  H5E_auto_t oef;
-  void *olderr;
-  H5Eget_auto(H5E_DEFAULT,&oef,&olderr);
-  // suppress hdf5 error output
-  //H5Eset_auto(H5E_DEFAULT,0,0);
+
   //open the hdf5 file
   H5File file(filename.c_str());
-  // restore old setting
-  //H5Eset_auto(H5E_DEFAULT,oef,olderr);
+  if (error_state)
+    return octave_value_list();
+
   if (nargin < 4)
     {
       octave_value retval = file.read_dset_complete(dsetname.c_str());
@@ -233,167 +230,18 @@ is to read.\n\
 
   string filename = args(0).string_value();
   string objname = args(1).string_value();
+  string attname = args(2).string_value();
   if (error_state)
     return octave_value_list();
   
-  H5E_auto_t oef;
-  void *olderr;
-  H5Eget_auto(H5E_DEFAULT,&oef,&olderr);
-  //suppress hdf5 error output
-  H5Eset_auto(H5E_DEFAULT,0,0);
   //open the hdf5 file
-  hid_t file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  // restore old setting
-  H5Eset_auto(H5E_DEFAULT,oef,olderr);
+  H5File file(filename.c_str());
+  if (error_state)
+    return octave_value_list();
         
-  if (file_id < 0)
-    {
-      error("h5readatt: opening the given file failed");
-      return retval;
-    }
-
-  hid_t obj = H5Oopen(file_id, objname.c_str(), H5P_DEFAULT);
-
-  if (obj < 0)
-    {
-      H5Oclose(obj);
-      H5Fclose(file_id);
-      error("h5readatt: opening the given object failed");
-      return retval;
-    }
-
-  hid_t attr = H5Aopen_name(obj, args(2).string_value().c_str());
-  if (attr < 0)
-    {
-      H5Oclose(obj);
-      H5Fclose(file_id);
-      error("h5readatt: opening the given attribute failed");
-      return retval;
-    }
-
-  hid_t type = H5Aget_type(attr);
-  if (type < 0)
-    {
-      H5Aclose(attr);
-      H5Oclose(obj);
-      H5Fclose(file_id);
-      error("h5readatt: dataset type error");
-      return retval;
-    }
-
-  size_t numVal = H5Aget_storage_size(attr)/H5Tget_size(type);
-  if (H5Tget_class(type) == H5T_FLOAT)
-    {
-      double value[numVal];
-      if (H5Tget_size(type) == sizeof(float))
-	{
-	  float f_value[numVal];
-	  if (H5Aread(attr, H5T_NATIVE_FLOAT, f_value)<0)
-	    {
-	      H5Aclose(attr);
-	      H5Oclose(obj);
-	      H5Fclose(file_id);
-	      error("h5readatt: reading the given float Attribute failed");
-	      return retval;
-	    }
-	  for (size_t n = 0; n < numVal; ++n)
-	    value[n] = f_value[n];
-	}
-      else if (H5Tget_size(type) == sizeof(double))
-	{
-	  if (H5Aread(attr, H5T_NATIVE_DOUBLE, value)<0)
-	    {
-	      H5Aclose(attr);
-	      H5Oclose(obj);
-	      H5Fclose(file_id);
-	      error("h5readatt: reading the given double Attribute failed");
-	      return retval;
-	    }
-	}
-      else
-	{
-	  H5Aclose(attr);
-	  H5Oclose(obj);
-	  H5Fclose(file_id);
-	  error("h5readatt: reading the given float Attribute failed: cannot handle size of type");
-	  return retval;
-	}
-
-      Matrix mat(numVal,1);
-      for (size_t n=0;n<numVal;++n)
-	mat(n)=value[n];
-      retval = octave_value(mat);
-
-    }
-  else if (H5Tget_class(type)==H5T_INTEGER)
-    {
-      // Integer attributes are casted to floating point octave values
-    
-      double value[numVal];
-      if (H5Tget_size(type)==sizeof(int))
-	{
-	  int f_value[numVal];
-	  if (H5Aread(attr, H5T_NATIVE_INT, f_value)<0)
-	    {
-	      H5Aclose(attr);
-	      H5Oclose(obj);
-	      H5Fclose(file_id);
-	      error("h5readatt: reading the given integer Attribute failed");
-	      return retval;
-	    }
-	  for (size_t n=0;n<numVal;++n)
-	    value[n] = f_value[n]*1.0;
-	}
-      else
-	{
-	  H5Aclose(attr);
-	  H5Oclose(obj);
-	  H5Fclose(file_id);
-	  error("h5readatt: reading the given integer Attribute failed: cannot handle size of type");
-	  return retval;
-	}
-
-      Matrix mat(numVal,1);
-      for (size_t n=0;n<numVal;++n)
-	mat(n)=value[n];
-      retval = octave_value(mat);
-    
-    }
-  else if (H5Tget_class(type)==H5T_STRING)
-    {
-      // Size of each string:
-      size_t size = H5Tget_size(type);
-      // to read an array of strings (for future work): 
-      //totsize = size*sdim[0]*sdim[1];
-      // to read a single string:
-      size_t totsize = size;
-      // Set up read buffer for attribute
-      char* buf = (char*)calloc(totsize, sizeof(char));
-      if (H5Aread(attr, type, buf)<0)
-	{
-	  H5Aclose(attr);
-	  H5Oclose(obj);
-	  H5Fclose(file_id);
-	  error("h5readatt: reading the given string Attribute failed");
-	  return retval;
-	}
-      retval = octave_value(buf);
-    }
-  else //none of the supported data types
-    {
-      H5Aclose(attr);
-      H5Oclose(obj);
-      H5Fclose(file_id);
-      error("h5readatt: attribute type not supported");
-      return retval;
-    }
-  
-
-  H5Aclose(attr);
-  H5Oclose(obj);
-  H5Fclose(file_id);
-
+  retval = file.read_att(objname.c_str(), attname.c_str());
   return retval;
+
 #endif
 }
 
@@ -432,15 +280,10 @@ a HDF5 file specified by @var{filename}.\n\
   if (error_state)
     return octave_value_list();
     
-  H5E_auto_t oef;
-  void *olderr;
-  H5Eget_auto(H5E_DEFAULT,&oef,&olderr);
-  // suppress hdf5 error output
-  H5Eset_auto(H5E_DEFAULT,0,0);
   //open the hdf5 file
   H5File file(filename.c_str());
-  // restore old setting
-  H5Eset_auto(H5E_DEFAULT,oef,olderr);
+  if (error_state)
+    return octave_value_list();
 
   file.write_dset(location.c_str(),
 		  data);
@@ -484,15 +327,10 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
   if (error_state)
     return octave_value_list();
     
-  H5E_auto_t oef;
-  void *olderr;
-  H5Eget_auto(H5E_DEFAULT,&oef,&olderr);
-  // suppress hdf5 error output
-  H5Eset_auto(H5E_DEFAULT,0,0);
   //open the hdf5 file
   H5File file(filename.c_str());
-  // restore old setting
-  H5Eset_auto(H5E_DEFAULT,oef,olderr);
+  if (error_state)
+    return octave_value_list();
 
   file.write_att(location.c_str(), attname.c_str(),
   		 args(3));
@@ -506,10 +344,18 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
 
 H5File::H5File(const char *filename)
 {
+  H5E_auto_t oef;
+  void *olderr;
+  H5Eget_auto(H5E_DEFAULT,&oef,&olderr);
+  //suppress hdf5 error output
+  H5Eset_auto(H5E_DEFAULT,0,0);
   file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT); 
+  // restore old setting
+  H5Eset_auto(H5E_DEFAULT,oef,olderr);
+  
   if (file < 0)
     {
-      error("%s: %s", filename, strerror(errno));
+      error("Opening the file failed, %s: %s", filename, strerror(errno));
       return;
     }
 }
@@ -525,9 +371,12 @@ H5File::~H5File()
   if (H5Iis_valid(dset_id))
     H5Dclose(dset_id);
   
+  if(H5Iis_valid(att_id))
+    H5Aclose(att_id);
+
   if(H5Iis_valid(obj_id))
     H5Oclose(obj_id);
-  
+
   if(H5Iis_valid(file))
     H5Fclose(file);
 
@@ -845,6 +694,122 @@ H5File::write_dset(const char *dsetname,
 
 
   free(dims);
+}
+
+octave_value
+H5File::read_att(const char *objname, const char *attname)
+{
+  octave_value retval;
+  obj_id = H5Oopen(file, objname, H5P_DEFAULT);
+
+  if (obj_id < 0)
+    {
+      error("h5readatt: opening the given object failed");
+      return retval;
+    }
+
+  att_id = H5Aopen_name(obj_id, attname);
+  if (att_id < 0)
+    {
+      error("h5readatt: opening the given attribute failed");
+      return retval;
+    }
+
+  hid_t type = H5Aget_type(att_id);
+  if (type < 0)
+    {
+      error("h5readatt: dataset type error");
+      return retval;
+    }
+
+  size_t numVal = H5Aget_storage_size(att_id)/H5Tget_size(type);
+  if (H5Tget_class(type) == H5T_FLOAT)
+    {
+      double value[numVal];
+      if (H5Tget_size(type) == sizeof(float))
+	{
+	  float f_value[numVal];
+	  if (H5Aread(att_id, H5T_NATIVE_FLOAT, f_value)<0)
+	    {
+	      error("h5readatt: reading the given float Attribute failed");
+	      return retval;
+	    }
+	  for (size_t n = 0; n < numVal; ++n)
+	    value[n] = f_value[n];
+	}
+      else if (H5Tget_size(type) == sizeof(double))
+	{
+	  if (H5Aread(att_id, H5T_NATIVE_DOUBLE, value)<0)
+	    {
+	      error("h5readatt: reading the given double Attribute failed");
+	      return retval;
+	    }
+	}
+      else
+	{
+	  error("h5readatt: reading the given float Attribute failed: \
+cannot handle size of type");
+	  return retval;
+	}
+
+      Matrix mat(numVal,1);
+      for (size_t n=0;n<numVal;++n)
+	mat(n)=value[n];
+      retval = octave_value(mat);
+
+    }
+  else if (H5Tget_class(type)==H5T_INTEGER)
+    {
+      // Integer attributes are casted to floating point octave values
+    
+      double value[numVal];
+      if (H5Tget_size(type)==sizeof(int))
+	{
+	  int f_value[numVal];
+	  if (H5Aread(att_id, H5T_NATIVE_INT, f_value)<0)
+	    {
+	      error("h5readatt: reading the given integer Attribute failed");
+	      return retval;
+	    }
+	  for (size_t n=0;n<numVal;++n)
+	    value[n] = f_value[n]*1.0;
+	}
+      else
+	{
+	  error("h5readatt: reading the given integer Attribute failed: cannot handle size of type");
+	  return retval;
+	}
+
+      Matrix mat(numVal,1);
+      for (size_t n=0;n<numVal;++n)
+	mat(n)=value[n];
+      retval = octave_value(mat);
+    
+    }
+  else if (H5Tget_class(type)==H5T_STRING)
+    {
+      // Size of each string:
+      size_t size = H5Tget_size(type);
+      // to read an array of strings (for future work): 
+      //totsize = size*sdim[0]*sdim[1];
+      // to read a single string:
+      size_t totsize = size;
+      // Set up read buffer for attribute
+      char* buf = (char*)calloc(totsize, sizeof(char));
+      if (H5Aread(att_id, type, buf)<0)
+	{
+	  error("h5readatt: reading the given string Attribute failed");
+	  return retval;
+	}
+      retval = octave_value(buf);
+    }
+  else //none of the supported data types
+    {
+      error("h5readatt: attribute type not supported");
+      return retval;
+    }
+  
+  return retval;
 }
 
 void

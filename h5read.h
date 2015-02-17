@@ -47,6 +47,7 @@ public:
 
   void write_dset(const char *location,
 		  const NDArray& data);
+  octave_value read_att(const char *location, const char *attname);
   void write_att(const char *location, const char *attname,
 		 const octave_value& attvalue);
       
@@ -61,6 +62,8 @@ private:
   hid_t dspace_id;
   hid_t memspace_id;
   hid_t obj_id;
+  hid_t att_id;
+
   
   //dimensions of the returned octave matrix
   dim_vector mat_dims;
