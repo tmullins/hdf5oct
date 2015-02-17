@@ -163,6 +163,10 @@ check_dset('/foo3_double', "matrix")
 matrix =reshape((1:s**4)*0.1, [s s s s]);
 check_dset('/foo4_double', "matrix")
 
+disp("Test h5write and h5read to subgroups...")
+matrix = reshape(cast(1:s**2,'int64'), [s s]);
+check_dset('/foo/foo2_int', "matrix")
+check_dset('/bar1/bar2/foo2_int', "matrix")
 
 disp("Test h5writeatt and h5readatt...")
 

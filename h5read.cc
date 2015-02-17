@@ -35,12 +35,11 @@
 #include <string>
 #include "gripes.h"
 
-#include "h5write.doc.h"
-#include "h5writeatt.doc.h"
-
 using namespace std;
 
 #if ((H5_VERS_MAJOR > 1) || (H5_VERS_MINOR >= 8))
+// define this in case there is no configure script at work. This
+// should not be necessary any more when integrated into core.
 #define HAVE_HDF5_18 1
 #endif
 
@@ -801,6 +800,22 @@ void H5File::write_dset(const char *dsetname,
   hsize_t *dims = alloc_hsize(new_mat_dims);
   dspace_id = H5Screate_simple(rank, dims, NULL);
 
+  //check if all groups in the path dsetname exist. if not, create them
+  string path(dsetname);
+  for(int i=1; i < path.length(); i++)
+    {
+      if(path[i] == '/')
+	{
+	  if(!H5Lexists(file, path.substr(0,i).c_str(), H5P_DEFAULT))
+	    {
+	      hid_t group_id = H5Gcreate(file, path.substr(0,i).c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	      H5Gclose(group_id);
+	    }
+	}
+    }
+  
+    //check if the data set already exists. if it does, open it,
+  //otherwise, create it.
   if(H5Lexists(file,dsetname,H5P_DEFAULT))
   {
     if(open_dset(dsetname) < 0)
