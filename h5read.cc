@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <string>
 #include "gripes.h"
+#include "file-stat.h"
 
 using namespace std;
 
@@ -149,7 +150,7 @@ Defaults to a vector of ones.\n\
       print_usage();
       return octave_value_list();
     }
-  if ((args(0).is_string()==false) || (args(1).is_string()==false))
+  if (!(args(0).is_string() && args(1).is_string()))
     {
       print_usage();
       return octave_value_list();
@@ -161,7 +162,7 @@ Defaults to a vector of ones.\n\
     return octave_value_list();
 
   //open the hdf5 file
-  H5File file(filename.c_str());
+  H5File file(filename.c_str(), false);
   if (error_state)
     return octave_value_list();
 
@@ -222,7 +223,7 @@ is to read.\n\
       print_usage();
       return retval;
     }
-  if ((args(0).is_string()==false) || (args(1).is_string()==false) || (args(2).is_string()==false))
+  if (!(args(0).is_string() && args(1).is_string() && args(2).is_string()))
     {
       print_usage();
       return retval;
@@ -235,7 +236,7 @@ is to read.\n\
     return octave_value_list();
   
   //open the hdf5 file
-  H5File file(filename.c_str());
+  H5File file(filename.c_str(), false);
   if (error_state)
     return octave_value_list();
         
@@ -267,7 +268,7 @@ a HDF5 file specified by @var{filename}.\n\
       print_usage();
       return octave_value_list();
     }
-  if ((args(0).is_string()==false) || (args(1).is_string()==false))
+  if (!(args(0).is_string() && args(1).is_string()))
     {
       print_usage();
       return octave_value_list();
@@ -281,7 +282,7 @@ a HDF5 file specified by @var{filename}.\n\
     return octave_value_list();
     
   //open the hdf5 file
-  H5File file(filename.c_str());
+  H5File file(filename.c_str(), true);
   if (error_state)
     return octave_value_list();
 
@@ -313,8 +314,7 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
       print_usage();
       return octave_value_list();
     }
-  if ((args(0).is_string()==false) || (args(1).is_string()==false)
-      || (args(2).is_string()==false))
+  if (!(args(0).is_string() && args(1).is_string() && args(2).is_string()))
     {
       print_usage();
       return octave_value_list();
@@ -328,7 +328,7 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
     return octave_value_list();
     
   //open the hdf5 file
-  H5File file(filename.c_str());
+  H5File file(filename.c_str(), false);
   if (error_state)
     return octave_value_list();
 
@@ -342,22 +342,37 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
 
 #if defined(HAVE_HDF5) && defined(HAVE_HDF5_18)
 
-H5File::H5File(const char *filename)
+H5File::H5File(const char *filename, const bool create_if_nonexisting)
 {
   H5E_auto_t oef;
   void *olderr;
   H5Eget_auto(H5E_DEFAULT,&oef,&olderr);
   //suppress hdf5 error output
   H5Eset_auto(H5E_DEFAULT,0,0);
-  file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT); 
+
+  file_stat fs(filename);
+  if (!fs.exists() && create_if_nonexisting)
+    {
+      file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    }
+  else
+    {
+      // test if the existing file is in HDF5 format
+      if(!H5Fis_hdf5(filename))
+	{
+	  error("The file is not in the HDF5 format, %s: %s", filename, strerror(errno));
+	}
+      else
+	{
+	  file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
+	  if (file < 0)
+	    {
+	      error("Opening the file failed, %s: %s", filename, strerror(errno));
+	    }
+	}
+    }
   // restore old setting
   H5Eset_auto(H5E_DEFAULT,oef,olderr);
-  
-  if (file < 0)
-    {
-      error("Opening the file failed, %s: %s", filename, strerror(errno));
-      return;
-    }
 }
 
 H5File::~H5File()
@@ -823,14 +838,14 @@ H5File::write_att(const char *location, const char *attname,
     }
   else if(attvalue.is_matrix_type())
     {
-      error("matrix types are not yet supported.");
+      error("matrix type attributes are not yet supported.");
       return;
       // dims = alloc_hsize(attvalue.dims());
       // dspace_id = H5Screate_simple(attvalue.dims().length(), dims, NULL);
     }
   else
     {
-      error("Only scalar or matrix types are supported.");
+      error("Only scalar attributes are supported at the moment.");
       return;
     }
   obj_id = H5Oopen(file, location, H5P_DEFAULT);
@@ -852,6 +867,7 @@ H5File::write_att(const char *location, const char *attname,
   else if(attvalue.is_complex_type())
     {
       error("writing complex attributes is not yet supported");
+      return;
     }
   else if(attvalue.is_integer_type())
     {
@@ -863,6 +879,7 @@ H5File::write_att(const char *location, const char *attname,
   else if(attvalue.is_string())
     {
       error("writing string attributes is not yet supported");
+      return;
     }
 
   if(H5Aexists(obj_id,attname))

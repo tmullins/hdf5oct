@@ -20,7 +20,7 @@ all: $(octs) package
 	$(MKOCTFILE) -c $<
 
 clean:
-	rm -f *.o *.oct package/inst/* $(testobjs) test/write_test test/test.h5 $(PACKAGEFILE)
+	rm -f *.o *.oct package/inst/* $(testobjs) test/write_test test/test*.h5 $(PACKAGEFILE)
 
 install: $(PACKAGEFILE)
 	@echo "-- Install Octave Package ------------"
@@ -47,6 +47,6 @@ test/write_test: test/write_test.cc
 # a target to test the octave functions
 test: test/write_test
 	@echo "-- Perform Tests --------------"
-	rm -f test/test.h5
+	rm -f test/test*.h5
 	cd test && ./write_test
 	cd test && octave --silent --no-gui h5test.m

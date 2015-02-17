@@ -206,13 +206,38 @@ check_att("/","testatt_int")
 testatt_int = 7.5;
 check_att("/","testatt_int")
 
-testatt_string = 'hallo';
-%check_att("/","testatt_string")
+disp("write to nonexisting file...")
+h5write("test2.h5","/foo/bar/test",reshape(1:27,[3 3 3]));
 
 
 disp("------------ test failures and wrong arguments: ----------------")
 try
+  % read from a nonexisting file
   data = h5read("nonexistingfile.h5","/foo")
 catch
   disp(["error catched: ", lasterror.message])
 end
+
+try
+  data = h5readatt("test.h5","/foo","too","many","arguments")
+catch
+  disp(["error catched: ", lasterror.message])
+end
+
+try
+  testatt_string = 'hallo';
+  check_att("/","testatt_string")
+catch
+  disp(["error catched: ", lasterror.message])
+end
+
+try
+  %create a struct.
+  x.a=1;
+  x.b="foo";
+  h5write("nonexistingfile.h5","/foo",x)
+catch
+  disp(["error catched: ", lasterror.message])
+end
+
+

@@ -35,7 +35,7 @@ class H5File
   
 public:
   
-  H5File(const char *filename);
+H5File(const char *filename, const bool create_if_nonexisting);
   
   ~H5File();
   
