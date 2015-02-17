@@ -5,7 +5,7 @@ Copyright 2012 Tom Mullins
 Copyright 2015 Tom Mullins, Anton Starikov, Thorsten Liebig, Stefan Großhauser
 
 This is a library for GNU Octave for reading hdf5 files. At the moment it
-provides only few functions:
+provides the following functions:
 
  h5read: modeled after Matlab's h5read, which can read subsets of a
  	 dataset.  Octave's load function will attempt to read an
@@ -19,13 +19,17 @@ provides only few functions:
  	    to read scalar HDF5 attributes of some types.
 
  h5write: Write a matrix to a dataset. This
-          will overwrite an already existing dataset, it cannot yet
-          append data.
+          will either overwrite an already existing dataset, or allow to
+	  append hyperslabs to existing datasets.
 
  h5writeatt: Attach an attribute to an object.
 
-Note that only few of the HDF5 datatypes are supported by hdf5oct at
-the moment, mostly float, integer and string.
+ h5create: Create a dataset and specify its extent dimensions,
+           datatype and chunk size.
+
+Note that only few of the HDF5 datatypes are supported by each of the
+functions hdf5oct at the moment, typically one or several of double,
+integer and string.
 
 # INSTALLATION #########################
 
@@ -57,11 +61,9 @@ To uninstall the package you may want to use
 
 # TODO #################################
 
-- complete h5write to write hyperslabs
+- write h5info
 
-- write h5create, h5info
-
-- allow to append to data, using the matlab syntax
+- support compression flags
 
 - read string typed datasets
 
@@ -76,9 +78,6 @@ To uninstall the package you may want to use
 - write more comprehensive tests instead of a few random choices. Also
   test for error conditions.
   
-- test with a chunked dataset with an unlimited dimension (should just work,
-  though I haven't tried it)
- 
 - make sure Fortran/C ordering is handled in a matlab compatible manner
 
 For integration into octave core:

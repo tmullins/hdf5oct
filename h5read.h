@@ -47,15 +47,22 @@ H5File(const char *filename, const bool create_if_nonexisting);
 
   void write_dset(const char *location,
 		  const NDArray& data);
+  void write_dset_hyperslab(const char *location,
+			    const NDArray& data,
+			    const Matrix& start, const Matrix& count,
+			    const Matrix& stride, const Matrix& block,
+			    int nargin);
   octave_value read_att(const char *location, const char *attname);
   void write_att(const char *location, const char *attname,
 		 const octave_value& attvalue);
-      
+  void create_dset(const char *location, const Matrix& size,
+		   const char *datatype, const Matrix& chunksize);
 private:
   //rank of the hdf5 dataset
   int rank;
   //dimensions of the hdf5 dataset
   hsize_t *h5_dims = NULL;
+  hsize_t *h5_maxdims = NULL;
 
   hid_t file;
   hid_t dset_id;

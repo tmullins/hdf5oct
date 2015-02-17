@@ -28,6 +28,7 @@ help h5read
 help h5write
 help h5readatt
 help h5writeatt
+help h5create
 
 % for debugging:
 %system (sprintf ("gnome-terminal --command 'gdb -p %d'", getpid ()), "async");
@@ -103,6 +104,39 @@ end
 
 disp("------------ test functionality: ----------------")
 
+disp("Test h5create and h5write hyperslabs...")
+chunksize = [1 3 2];
+h5create("test.h5","/created_dset1",[ Inf 3 2],'ChunkSize',chunksize)
+
+i=0;
+%h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**i,chunksize), [ 1+chunksize(1)*i, 1, 1], chunksize)
+i = i+1;
+start = [ 1+chunksize(1)*i, 1, 1];
+h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**i,chunksize), start, chunksize)
+i = i+1
+start = [ 1+chunksize(1)*i, 1, 1];
+h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**i,chunksize), start, chunksize)
+%%%%%%%%
+h5create("test.h5","/created_dset_single",[ 2 3 4],'Datatype','single')
+%%%%%%%%
+h5create("test.h5","/created_dset_inf1",[ Inf Inf 4],'Datatype','uint64', 'ChunkSize', [10 2 4])
+%%%%%%%%
+chunksize = [2 3 2];
+h5create("test.h5","created_dset_inf2",[ 2 3 Inf],'Datatype','uint32', 'ChunkSize', chunksize)
+i=0;
+%h5write("test.h5","/created_dset_inf2",reshape((1:prod(chunksize))*10**i,chunksize), [ 1+chunksize(1)*i, 1, 1], chunksize)
+i = i+1;
+i = i+1;
+start = [ 1,1,1+chunksize(1)*i];
+h5write("test.h5","/created_dset_inf2",reshape((1:prod(chunksize))*10**i,chunksize), start, chunksize)
+i = i+1;
+start = [ 1,1,1+chunksize(1)*i];
+h5write("test.h5","/created_dset_inf2",reshape((1:prod(chunksize))*10**i,chunksize), start, chunksize)
+
+%%%%%%%%
+h5create("test.h5","created_dset_inf23",[ 2 3 4],'Datatype','int8', 'ChunkSize', [2 3 2])
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp("Test h5read hyperslabs...")
 check_slice("test.h5", 0);
 check_slice("test.h5", 1);
@@ -114,6 +148,8 @@ check_slice("test.h5", 2, [1, 2], [2, 1]);
 check_slice("test.h5", 3, [1, 2, 1], [2, 1, 2], [2, 1, 1]);
 check_slice("test.h5", 3, [2, 1, 1], [2, 2, 2], [2, 3, 1], [1, 2, 1]);
 check_slice("test.h5", 4, [2, 1, 1, 2], [2, 2, 2, 1], [2, 3, 1, 3], [1, 2, 1, 1]);
+
+disp("Test h5write hyperslabs...")
 
 
 disp("Test h5write and h5read...")
