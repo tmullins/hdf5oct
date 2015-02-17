@@ -47,56 +47,58 @@ using namespace std;
 #include <hdf5.h>
 #include "h5read.h"
 
-bool any_int_leq_zero(const Matrix& mat)
+bool
+any_int_leq_zero(const Matrix& mat)
 {
   for (int i = 0; i < mat.length(); i++)
-  {
-    if (mat(i) < 0.5)
     {
-      return true;
+      if (mat(i) < 0.5)
+	{
+	  return true;
+	}
     }
-  }
   return false;
 }
 
 // if ALLOW_ZEROS, then Infs will be converted to 0s (used for COUNT)
 // else, 0s will produce an error message (used for others)
-int check_vec(const octave_value& val, Matrix& mat/*out*/,
-    const char *name, bool allow_zeros)
+int
+check_vec(const octave_value& val, Matrix& mat/*out*/,
+	      const char *name, bool allow_zeros)
 {
   mat = val.matrix_value();
   if (error_state)
-  {
-    return 1;
-  }
+    {
+      return 1;
+    }
 
   if (!mat.is_vector())
-  {
-    error("%s must be a vector", name);
-    return 1;
-  }
+    {
+      error("%s must be a vector", name);
+      return 1;
+    }
 
   double mind, maxd;
   if (allow_zeros)
-  {
-    for (int i = 0; i < mat.nelem(); i++)
     {
-      if (mat(i) == octave_Inf)
-      {
-        mat(i) = 0;
-      }
+      for (int i = 0; i < mat.nelem(); i++)
+	{
+	  if (mat(i) == octave_Inf)
+	    {
+	      mat(i) = 0;
+	    }
+	}
+      if (!mat.all_integers(mind, maxd) || mat.any_element_is_negative())
+	{
+	  error("%s can only contain non-negative integers", name);
+	  return 1;
+	}
     }
-    if (!mat.all_integers(mind, maxd) || mat.any_element_is_negative())
-    {
-      error("%s can only contain non-negative integers", name);
-      return 1;
-    }
-  }
   else if (!mat.all_integers(mind, maxd) || any_int_leq_zero(mat))
-  {
-    error("%s can only contain positive integers", name);
-    return 1;
-  } 
+    {
+      error("%s can only contain positive integers", name);
+      return 1;
+    } 
 
   return 0;
 }
@@ -143,15 +145,15 @@ Defaults to a vector of ones.\n\
   int nargin = args.length();
 
   if (nargin < 2 || nargin == 3 || nargin > 6 || nargout > 1)
-  {
-    print_usage();
-    return octave_value_list();
-  }
+    {
+      print_usage();
+      return octave_value_list();
+    }
   if ((args(0).is_string()==false) || (args(1).is_string()==false))
-  {
-    print_usage();
-    return octave_value_list();
-  }
+    {
+      print_usage();
+      return octave_value_list();
+    }
 
   string filename = args(0).string_value();
   string dsetname = args(1).string_value();
@@ -167,36 +169,36 @@ Defaults to a vector of ones.\n\
   // restore old setting
   //H5Eset_auto(H5E_DEFAULT,oef,olderr);
   if (nargin < 4)
-  {
-    octave_value retval = file.read_dset_complete(dsetname.c_str());
-    return retval;
-  }
+    {
+      octave_value retval = file.read_dset_complete(dsetname.c_str());
+      return retval;
+    }
   else
-  {
-    Matrix start, count, stride, block;
-    int err = 0;
+    {
+      Matrix start, count, stride, block;
+      int err = 0;
     
-    err = err || check_vec(args(2), start, "START", false);
-    start -= 1;
+      err = err || check_vec(args(2), start, "START", false);
+      start -= 1;
 
-    err = err || check_vec(args(3), count, "COUNT", true);
+      err = err || check_vec(args(3), count, "COUNT", true);
 
-    if (nargin < 5)
-      stride = Matrix();
-    else
-      err = err || check_vec(args(4), stride, "STRIDE", false);
+      if (nargin < 5)
+	stride = Matrix();
+      else
+	err = err || check_vec(args(4), stride, "STRIDE", false);
 
-    if (nargin < 6)
-      block = Matrix();
-    else
-      err = err || check_vec(args(5), block, "BLOCK", false);
+      if (nargin < 6)
+	block = Matrix();
+      else
+	err = err || check_vec(args(5), block, "BLOCK", false);
 
-    if (err)
-      return octave_value_list();
+      if (err)
+	return octave_value_list();
 
-    return file.read_dset_hyperslab(dsetname.c_str(),
-				    start, count, stride, block, nargin-2);
-  }
+      return file.read_dset_hyperslab(dsetname.c_str(),
+				      start, count, stride, block, nargin-2);
+    }
 #endif
 }
 
@@ -219,15 +221,15 @@ is to read.\n\
 #else
   int nargin = args.length();
   if (nargin != 3)
-  {
-    print_usage();
-    return retval;
-  }
+    {
+      print_usage();
+      return retval;
+    }
   if ((args(0).is_string()==false) || (args(1).is_string()==false) || (args(2).is_string()==false))
-  {
-    print_usage();
-    return retval;
-  }
+    {
+      print_usage();
+      return retval;
+    }
 
   string filename = args(0).string_value();
   string objname = args(1).string_value();
@@ -245,146 +247,146 @@ is to read.\n\
   H5Eset_auto(H5E_DEFAULT,oef,olderr);
         
   if (file_id < 0)
-  {
-    error("h5readatt: opening the given file failed");
-    return retval;
-  }
+    {
+      error("h5readatt: opening the given file failed");
+      return retval;
+    }
 
   hid_t obj = H5Oopen(file_id, objname.c_str(), H5P_DEFAULT);
 
   if (obj < 0)
-  {
-    H5Oclose(obj);
-    H5Fclose(file_id);
-    error("h5readatt: opening the given object failed");
-    return retval;
-  }
+    {
+      H5Oclose(obj);
+      H5Fclose(file_id);
+      error("h5readatt: opening the given object failed");
+      return retval;
+    }
 
   hid_t attr = H5Aopen_name(obj, args(2).string_value().c_str());
   if (attr < 0)
-  {
-    H5Oclose(obj);
-    H5Fclose(file_id);
-    error("h5readatt: opening the given attribute failed");
-    return retval;
-  }
+    {
+      H5Oclose(obj);
+      H5Fclose(file_id);
+      error("h5readatt: opening the given attribute failed");
+      return retval;
+    }
 
   hid_t type = H5Aget_type(attr);
   if (type < 0)
-  {
-    H5Aclose(attr);
-    H5Oclose(obj);
-    H5Fclose(file_id);
-    error("h5readatt: dataset type error");
-    return retval;
-  }
+    {
+      H5Aclose(attr);
+      H5Oclose(obj);
+      H5Fclose(file_id);
+      error("h5readatt: dataset type error");
+      return retval;
+    }
 
   size_t numVal = H5Aget_storage_size(attr)/H5Tget_size(type);
   if (H5Tget_class(type) == H5T_FLOAT)
-  {
-    double value[numVal];
-    if (H5Tget_size(type) == sizeof(float))
     {
-      float f_value[numVal];
-      if (H5Aread(attr, H5T_NATIVE_FLOAT, f_value)<0)
-      {
-	H5Aclose(attr);
-	H5Oclose(obj);
-	H5Fclose(file_id);
-	error("h5readatt: reading the given float Attribute failed");
-	return retval;
-      }
-      for (size_t n = 0; n < numVal; ++n)
-	value[n] = f_value[n];
-    }
-    else if (H5Tget_size(type) == sizeof(double))
-    {
-      if (H5Aread(attr, H5T_NATIVE_DOUBLE, value)<0)
-      {
-	H5Aclose(attr);
-	H5Oclose(obj);
-	H5Fclose(file_id);
-	error("h5readatt: reading the given double Attribute failed");
-	return retval;
-      }
-    }
-    else
-    {
-      H5Aclose(attr);
-      H5Oclose(obj);
-      H5Fclose(file_id);
-      error("h5readatt: reading the given float Attribute failed: cannot handle size of type");
-      return retval;
-    }
+      double value[numVal];
+      if (H5Tget_size(type) == sizeof(float))
+	{
+	  float f_value[numVal];
+	  if (H5Aread(attr, H5T_NATIVE_FLOAT, f_value)<0)
+	    {
+	      H5Aclose(attr);
+	      H5Oclose(obj);
+	      H5Fclose(file_id);
+	      error("h5readatt: reading the given float Attribute failed");
+	      return retval;
+	    }
+	  for (size_t n = 0; n < numVal; ++n)
+	    value[n] = f_value[n];
+	}
+      else if (H5Tget_size(type) == sizeof(double))
+	{
+	  if (H5Aread(attr, H5T_NATIVE_DOUBLE, value)<0)
+	    {
+	      H5Aclose(attr);
+	      H5Oclose(obj);
+	      H5Fclose(file_id);
+	      error("h5readatt: reading the given double Attribute failed");
+	      return retval;
+	    }
+	}
+      else
+	{
+	  H5Aclose(attr);
+	  H5Oclose(obj);
+	  H5Fclose(file_id);
+	  error("h5readatt: reading the given float Attribute failed: cannot handle size of type");
+	  return retval;
+	}
 
-    Matrix mat(numVal,1);
-    for (size_t n=0;n<numVal;++n)
-      mat(n)=value[n];
-    retval = octave_value(mat);
-
-  }
-  else if (H5Tget_class(type)==H5T_INTEGER)
-  {
-    // Integer attributes are casted to floating point octave values
-    
-    double value[numVal];
-    if (H5Tget_size(type)==sizeof(int))
-    {
-      int f_value[numVal];
-      if (H5Aread(attr, H5T_NATIVE_INT, f_value)<0)
-      {
-	H5Aclose(attr);
-	H5Oclose(obj);
-	H5Fclose(file_id);
-	error("h5readatt: reading the given integer Attribute failed");
-	return retval;
-      }
+      Matrix mat(numVal,1);
       for (size_t n=0;n<numVal;++n)
-	value[n] = f_value[n]*1.0;
-    }
-    else
-    {
-      H5Aclose(attr);
-      H5Oclose(obj);
-      H5Fclose(file_id);
-      error("h5readatt: reading the given integer Attribute failed: cannot handle size of type");
-      return retval;
-    }
+	mat(n)=value[n];
+      retval = octave_value(mat);
 
-    Matrix mat(numVal,1);
-    for (size_t n=0;n<numVal;++n)
-      mat(n)=value[n];
-    retval = octave_value(mat);
+    }
+  else if (H5Tget_class(type)==H5T_INTEGER)
+    {
+      // Integer attributes are casted to floating point octave values
     
-  }
+      double value[numVal];
+      if (H5Tget_size(type)==sizeof(int))
+	{
+	  int f_value[numVal];
+	  if (H5Aread(attr, H5T_NATIVE_INT, f_value)<0)
+	    {
+	      H5Aclose(attr);
+	      H5Oclose(obj);
+	      H5Fclose(file_id);
+	      error("h5readatt: reading the given integer Attribute failed");
+	      return retval;
+	    }
+	  for (size_t n=0;n<numVal;++n)
+	    value[n] = f_value[n]*1.0;
+	}
+      else
+	{
+	  H5Aclose(attr);
+	  H5Oclose(obj);
+	  H5Fclose(file_id);
+	  error("h5readatt: reading the given integer Attribute failed: cannot handle size of type");
+	  return retval;
+	}
+
+      Matrix mat(numVal,1);
+      for (size_t n=0;n<numVal;++n)
+	mat(n)=value[n];
+      retval = octave_value(mat);
+    
+    }
   else if (H5Tget_class(type)==H5T_STRING)
-  {
-    // Size of each string:
-    size_t size = H5Tget_size(type);
-    // to read an array of strings (for future work): 
-    //totsize = size*sdim[0]*sdim[1];
-    // to read a single string:
-    size_t totsize = size;
-    // Set up read buffer for attribute
-    char* buf = (char*)calloc(totsize, sizeof(char));
-    if (H5Aread(attr, type, buf)<0)
+    {
+      // Size of each string:
+      size_t size = H5Tget_size(type);
+      // to read an array of strings (for future work): 
+      //totsize = size*sdim[0]*sdim[1];
+      // to read a single string:
+      size_t totsize = size;
+      // Set up read buffer for attribute
+      char* buf = (char*)calloc(totsize, sizeof(char));
+      if (H5Aread(attr, type, buf)<0)
+	{
+	  H5Aclose(attr);
+	  H5Oclose(obj);
+	  H5Fclose(file_id);
+	  error("h5readatt: reading the given string Attribute failed");
+	  return retval;
+	}
+      retval = octave_value(buf);
+    }
+  else //none of the supported data types
     {
       H5Aclose(attr);
       H5Oclose(obj);
       H5Fclose(file_id);
-      error("h5readatt: reading the given string Attribute failed");
+      error("h5readatt: attribute type not supported");
       return retval;
     }
-    retval = octave_value(buf);
-  }
-  else //none of the supported data types
-  {
-    H5Aclose(attr);
-    H5Oclose(obj);
-    H5Fclose(file_id);
-    error("h5readatt: attribute type not supported");
-    return retval;
-  }
   
 
   H5Aclose(attr);
@@ -413,15 +415,15 @@ a HDF5 file specified by @var{filename}.\n\
   int nargin = args.length();
 
   if (nargin != 3)
-  {
-    print_usage();
-    return octave_value_list();
-  }
+    {
+      print_usage();
+      return octave_value_list();
+    }
   if ((args(0).is_string()==false) || (args(1).is_string()==false))
-  {
-    print_usage();
-    return octave_value_list();
-  }
+    {
+      print_usage();
+      return octave_value_list();
+    }
 
   string filename = args(0).string_value();
   string location = args(1).string_value();
@@ -464,16 +466,16 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
   int nargin = args.length();
 
   if (nargin != 4)
-  {
-    print_usage();
-    return octave_value_list();
-  }
+    {
+      print_usage();
+      return octave_value_list();
+    }
   if ((args(0).is_string()==false) || (args(1).is_string()==false)
       || (args(2).is_string()==false))
-  {
-    print_usage();
-    return octave_value_list();
-  }
+    {
+      print_usage();
+      return octave_value_list();
+    }
 
   string filename = args(0).string_value();
   string location = args(1).string_value();
@@ -506,10 +508,10 @@ H5File::H5File(const char *filename)
 {
   file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT); 
   if (file < 0)
-  {
-    error("%s: %s", filename, strerror(errno));
-    return;
-  }
+    {
+      error("%s: %s", filename, strerror(errno));
+      return;
+    }
 }
 
 H5File::~H5File()
@@ -530,48 +532,50 @@ H5File::~H5File()
     H5Fclose(file);
 
   if (h5_dims != NULL)
-  {
-    free(h5_dims);
-    h5_dims = NULL;
-  }
+    {
+      free(h5_dims);
+      h5_dims = NULL;
+    }
 }
 
 // T will be Matrix or dim_vector
 template <typename T>
-hsize_t* alloc_hsize(const T& dim)
+hsize_t*
+alloc_hsize(const T& dim)
 {
   int rank = dim.length();
   hsize_t *hsize = (hsize_t*)malloc(rank * sizeof(hsize_t));
   for (int i = 0; i < rank; i++)
-  {
-    hsize[i] = dim(i);
-  }
+    {
+      hsize[i] = dim(i);
+    }
   return hsize;
 }
 
 
-int H5File::open_dset(const char *dsetname)
+int
+H5File::open_dset(const char *dsetname)
 {
   dset_id = H5Dopen(file, dsetname, H5P_DEFAULT);
   if (dset_id < 0)
-  {
-    error("Error opening dataset %s", dsetname);
-    return -1;
-  }
+    {
+      error("Error opening dataset %s", dsetname);
+      return -1;
+    }
 
   dspace_id = H5Dget_space(dset_id);
   if (dspace_id < 0)
-  {
-    error("Error opening dataspace %s", dsetname);
-    return -1;
-  }
+    {
+      error("Error opening dataspace %s", dsetname);
+      return -1;
+    }
 
   rank = H5Sget_simple_extent_ndims(dspace_id);
   if (rank < 0)
-  {
-    error("Error reading extent of %s", dsetname);
-    return -1;
-  }
+    {
+      error("Error reading extent of %s", dsetname);
+      return -1;
+    }
 
   h5_dims = (hsize_t*)malloc(rank * sizeof(hsize_t));
   if (!h5_dims)
@@ -588,7 +592,8 @@ int H5File::open_dset(const char *dsetname)
   return 0;
 }
 
-octave_value H5File::read_dset_complete(const char *dsetname)
+octave_value
+H5File::read_dset_complete(const char *dsetname)
 {
   if(open_dset(dsetname) < 0)
     return octave_value_list();
@@ -603,62 +608,62 @@ octave_value H5File::read_dset_complete(const char *dsetname)
     }
 
   if(H5Sselect_all(dspace_id) < 0)
-  {
-    error("Error selecting complete dataset %s", dsetname);
-    return octave_value_list();
-  }
+    {
+      error("Error selecting complete dataset %s", dsetname);
+      return octave_value_list();
+    }
 
   octave_value retval = read_dset();
   return retval;
 }
 
-octave_value H5File::read_dset_hyperslab(const char *dsetname,
-					 const Matrix& start, const Matrix& count,
-					 const Matrix& stride, const Matrix& block,
-					 int nargin)
+octave_value
+H5File::read_dset_hyperslab(const char *dsetname,
+			    const Matrix& start, const Matrix& count,
+			    const Matrix& stride, const Matrix& block,
+			    int nargin)
 {
   if(open_dset(dsetname) < 0)
     return octave_value_list();
 
-  // if (!(rank == 0 && start.is_empty() && count.is_empty()
-  // 	&& stride.is_empty() && block.is_empty())
-  // {
-  //   error("Cannot specify hyperslab for scalar datasets (rank 0)");
-  //   return octave_value_list();
-  // }
+  if (rank == 0 && !(start.is_empty() && count.is_empty()
+		     && stride.is_empty() && block.is_empty()))
+    {
+      error("Cannot specify hyperslab for scalar datasets (rank 0)");
+      return octave_value_list();
+    }
 
   if(start.nelem() != rank)
-  {
-    error("start must be a vector of length %d, the dataset rank", rank);
-    return octave_value_list();
-  }
+    {
+      error("start must be a vector of length %d, the dataset rank", rank);
+      return octave_value_list();
+    }
   if(count.nelem() != rank)
-  {
-    error("count must be a vector of length %d, the dataset rank", rank);
-    return octave_value_list();
-  }
-
+    {
+      error("count must be a vector of length %d, the dataset rank", rank);
+      return octave_value_list();
+    }
   
   Matrix _stride = stride;
   if(nargin < 3)
-  {
-    _stride = Matrix(dim_vector(1, rank), 1);
-  }
+    {
+      _stride = Matrix(dim_vector(1, rank), 1);
+    }
   if(_stride.nelem() != rank)
-  {
-    error("stride must be a vector of length %d, the dataset rank", rank);
-    return octave_value_list();
-  }
+    {
+      error("stride must be a vector of length %d, the dataset rank", rank);
+      return octave_value_list();
+    }
   Matrix _block = block;
   if(nargin < 4)
-  {
-    _block = Matrix(dim_vector(1, rank), 1);
-  }
+    {
+      _block = Matrix(dim_vector(1, rank), 1);
+    }
   if(_block.nelem() != rank)
-  {
-    error("block must be a vector of length %d, the dataset rank", rank);
-    return octave_value_list();
-  }
+    {
+      error("block must be a vector of length %d, the dataset rank", rank);
+      return octave_value_list();
+    }
   
   // .resize(1) still leaves mat_dims with a length of 2 for some reason, so
   // we need at least 2 filled
@@ -667,29 +672,29 @@ octave_value H5File::read_dset_hyperslab(const char *dsetname,
 
   Matrix _count = count;
   for (int i = 0; i < rank; i++)
-  {
-    if (_stride(i) < _block(i))
     {
-      error("In dimension %d, requested stride %d smaller than block size %d",
-	    i+1, (int)_stride(i), (int)_block(i));
-      return octave_value_list();
+      if (_stride(i) < _block(i))
+	{
+	  error("In dimension %d, requested stride %d smaller than block size %d",
+		i+1, (int)_stride(i), (int)_block(i));
+	  return octave_value_list();
+	}
+      if (_count(i) == 0)
+	{
+	  // a value of 0 (or Inf) means that as many blocks as possible
+	  // shall be read in this dimension
+	  _count(i) = (h5_dims[i] - start(i) - _block(i)) / _stride(i) + 1;
+	}
+      mat_dims(i) = _count(i)*_block(i);
+      int end = start(i) + _stride(i)*(_count(i)-1) + _block(i); // exclusive
+      if (h5_dims[i] < end)
+	{
+	  error("In dimension %d, dataset only has %d elements, but at least %d"
+		" are required for requested hyperslab", i+1, (int)h5_dims[i],
+		end);
+	  return octave_value_list();
+	}
     }
-    if (_count(i) == 0)
-    {
-      // a value of 0 (or Inf) means that as many blocks as possible
-      // shall be read in this dimension
-      _count(i) = (h5_dims[i] - start(i) - _block(i)) / _stride(i) + 1;
-    }
-    mat_dims(i) = _count(i)*_block(i);
-    int end = start(i) + _stride(i)*(_count(i)-1) + _block(i); // exclusive
-    if (h5_dims[i] < end)
-    {
-      error("In dimension %d, dataset only has %d elements, but at least %d"
-	    " are required for requested hyperslab", i+1, (int)h5_dims[i],
-	    end);
-      return octave_value_list();
-    }
-  }
 
   hsize_t *hstart = alloc_hsize(start);
   hsize_t *hstride = alloc_hsize(_stride);
@@ -706,42 +711,43 @@ octave_value H5File::read_dset_hyperslab(const char *dsetname,
   free(hblock);
 
   if (sel_result < 0)
-  {
-    return octave_value_list();
-  }
+    {
+      return octave_value_list();
+    }
 
   octave_value retval = read_dset();
   return retval;
 }
 
-octave_value H5File::read_dset()
+octave_value
+H5File::read_dset()
 {
   bool is_cmplx = false;
   hid_t type_id = H5Dget_type(dset_id);
   hid_t type_class_id = H5Tget_class(type_id);
   
   if (type_class_id == H5T_COMPOUND)
-  {
-    hid_t complex_type = hdf5_make_complex_type(H5T_NATIVE_DOUBLE);
-    if (hdf5_types_compatible(type_id, complex_type))
-      is_cmplx = true;
-  }
+    {
+      hid_t complex_type = hdf5_make_complex_type(H5T_NATIVE_DOUBLE);
+      if (hdf5_types_compatible(type_id, complex_type))
+	is_cmplx = true;
+    }
 
   Matrix perm_vec(1, rank);
   if (rank >= 2)
-  {
-    // reverse the elements in mat_dims
-    dim_vector new_mat_dims;
-    new_mat_dims.resize(rank);
-    for (int i = 0; i < rank; i++)
     {
-      int j = rank-i-1;
-      new_mat_dims(i) = mat_dims(j);
+      // reverse the elements in mat_dims
+      dim_vector new_mat_dims;
+      new_mat_dims.resize(rank);
+      for (int i = 0; i < rank; i++)
+	{
+	  int j = rank-i-1;
+	  new_mat_dims(i) = mat_dims(j);
       
-      perm_vec(i) = j;
+	  perm_vec(i) = j;
+	}
+      mat_dims = new_mat_dims;
     }
-    mat_dims = new_mat_dims;
-  }
 
   hsize_t *hmem = alloc_hsize(mat_dims);
   hid_t memspace_id = H5Screate_simple(rank, hmem, hmem);
@@ -749,35 +755,36 @@ octave_value H5File::read_dset()
 
   herr_t read_result;
   if (is_cmplx)
-  {
-    ComplexNDArray retval(mat_dims); 
-    read_result = H5Dread(dset_id,
-  			  hdf5_make_complex_type(H5T_NATIVE_DOUBLE),
-  			  memspace_id, dspace_id,
-  			  H5P_DEFAULT, retval.fortran_vec());
-    if (read_result < 0)
-      return octave_value_list();
-    if (rank >= 2)
-      retval = retval.permute(perm_vec, false);
-    return octave_value(retval);
-  }
+    {
+      ComplexNDArray retval(mat_dims); 
+      read_result = H5Dread(dset_id,
+			    hdf5_make_complex_type(H5T_NATIVE_DOUBLE),
+			    memspace_id, dspace_id,
+			    H5P_DEFAULT, retval.fortran_vec());
+      if (read_result < 0)
+	return octave_value_list();
+      if (rank >= 2)
+	retval = retval.permute(perm_vec, false);
+      return octave_value(retval);
+    }
   else
-  {
-    NDArray retval(mat_dims);
-    read_result = H5Dread(dset_id,
-  			  H5T_NATIVE_DOUBLE,
-  			  memspace_id, dspace_id,
-  			  H5P_DEFAULT, retval.fortran_vec());
-    if (read_result < 0)
-      return octave_value_list();
-    else if (rank >= 2)
-      retval = retval.permute(perm_vec, false);
+    {
+      NDArray retval(mat_dims);
+      read_result = H5Dread(dset_id,
+			    H5T_NATIVE_DOUBLE,
+			    memspace_id, dspace_id,
+			    H5P_DEFAULT, retval.fortran_vec());
+      if (read_result < 0)
+	return octave_value_list();
+      else if (rank >= 2)
+	retval = retval.permute(perm_vec, false);
 
-    return octave_value(retval);
-  }
+      return octave_value(retval);
+    }
 }
 
-void H5File::write_dset(const char *dsetname,
+void
+H5File::write_dset(const char *dsetname,
 			const NDArray& data)
 {
   int rank = data.dims().length();
@@ -814,15 +821,15 @@ void H5File::write_dset(const char *dsetname,
 	}
     }
   
-    //check if the data set already exists. if it does, open it,
+  //check if the data set already exists. if it does, open it,
   //otherwise, create it.
   if(H5Lexists(file,dsetname,H5P_DEFAULT))
-  {
-    if(open_dset(dsetname) < 0)
     {
-      error("Could not open existing dataset in order to write to");
+      if(open_dset(dsetname) < 0)
+	{
+	  error("Could not open existing dataset in order to write to");
+	}
     }
-  }
   else
     dset_id = H5Dcreate(file, dsetname, H5T_NATIVE_DOUBLE, dspace_id,
 			H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -840,26 +847,27 @@ void H5File::write_dset(const char *dsetname,
   free(dims);
 }
 
-void H5File::write_att(const char *location, const char *attname,
+void
+H5File::write_att(const char *location, const char *attname,
 		       const octave_value& attvalue)
 {
   hsize_t *dims;
   if(attvalue.is_scalar_type())
-  {
-    dspace_id = H5Screate(H5S_SCALAR);
-  }
+    {
+      dspace_id = H5Screate(H5S_SCALAR);
+    }
   else if(attvalue.is_matrix_type())
-  {
-    error("matrix types are not yet supported.");
-    return;
-    // dims = alloc_hsize(attvalue.dims());
-    // dspace_id = H5Screate_simple(attvalue.dims().length(), dims, NULL);
-  }
+    {
+      error("matrix types are not yet supported.");
+      return;
+      // dims = alloc_hsize(attvalue.dims());
+      // dspace_id = H5Screate_simple(attvalue.dims().length(), dims, NULL);
+    }
   else
-  {
-    error("Only scalar or matrix types are supported.");
-    return;
-  }
+    {
+      error("Only scalar or matrix types are supported.");
+      return;
+    }
   obj_id = H5Oopen(file, location, H5P_DEFAULT);
 
   hid_t attr_id;
@@ -907,28 +915,30 @@ void H5File::write_att(const char *location, const char *attname,
   H5Tclose(mem_type_id);
 }
 
-bool hdf5_types_compatible (hid_t t1, hid_t t2)
+bool
+hdf5_types_compatible (hid_t t1, hid_t t2)
 {
   int n;
   if ((n = H5Tget_nmembers (t1)) != H5Tget_nmembers (t2))
     return false;
 
   for (int i = 0; i < n; ++i)
-  {
-    hid_t mt1 = H5Tget_member_type (t1, i);
-    hid_t mt2 = H5Tget_member_type (t2, i);
+    {
+      hid_t mt1 = H5Tget_member_type (t1, i);
+      hid_t mt2 = H5Tget_member_type (t2, i);
 
-    if (H5Tget_class (mt1) != H5Tget_class (mt2))
-      return false;
+      if (H5Tget_class (mt1) != H5Tget_class (mt2))
+	return false;
 
-    H5Tclose (mt2);
-    H5Tclose (mt1);
-  }
+      H5Tclose (mt2);
+      H5Tclose (mt1);
+    }
 
   return true;
 }
 
-hid_t hdf5_make_complex_type (hid_t num_type)
+hid_t
+hdf5_make_complex_type (hid_t num_type)
 {
   hid_t type_id = H5Tcreate (H5T_COMPOUND, sizeof (double) * 2);
 
