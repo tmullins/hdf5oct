@@ -15,18 +15,17 @@ provides only few functions:
  	 fairly limiting. This exposes libhdf5's H5Sselect_hyperslab
  	 in a way which tries to be compatible with Matlab.
 
- h5readatt: Most of this function was written by thliebig. Itd allows
- 	    to read scalar HDF5 attributes of some types (float,
- 	    integer, string).
+ h5readatt: Most of this function was written by thliebig. It allows
+ 	    to read scalar HDF5 attributes of some types.
 
- h5write: Writes a floating point or integer matrix to a dataset. This
+ h5write: Write a matrix to a dataset. This
           will overwrite an already existing dataset, it cannot yet
           append data.
 
- h5writeatt: Attach a scalar floating point attribute to an object.
+ h5writeatt: Attach an attribute to an object.
 
 Note that only few of the HDF5 datatypes are supported by hdf5oct at
-the moment.
+the moment, mostly float, integer and string.
 
 # INSTALLATION #########################
 
@@ -58,7 +57,9 @@ To uninstall the package you may want to use
 
 # TODO #################################
 
-- complete h5write, h5writeatt, write h5create, h5info
+- complete h5write to write hyperslabs
+
+- write h5create, h5info
 
 - allow to append to data, using the matlab syntax
 
@@ -67,6 +68,8 @@ To uninstall the package you may want to use
 - read string-array typed attributes
 
 - document how to read complex data
+
+- write complex data in the same way as it is read
 
 - maybe use hdf5's c++ interface instead of the c interace.
 

@@ -252,7 +252,9 @@ DEFUN_DLD(h5write, args, nargout,
 @deftypefn {Loadable Function} h5write (@var{filename}, @var{dsetname}, @var{data})\n\
 \n\
 Write a matrix @var{data} to the specified location @var{dsetname} in \n\
-a HDF5 file specified by @var{filename}.\n\
+a HDF5 file specified by @var{filename}. If the file @var{filename} does\n\
+not exist, it will be created. If the dataset @var{dsetname} already\n\
+exists, it will be overwritten.\n\
 \n\
 @seealso{h5read}\n\
 @end deftypefn")
