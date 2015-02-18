@@ -410,10 +410,16 @@ respective dimensions and 0 initial extent.\n\
 \n\
 The list of @var{key}, @var{val} arguments allows to specify\n\
 certain properties of the dataset. Allowed settings are:\n\
-Datatype : double single uint64 uint32 uint16 uint8 int64  int32  int16  int8 \n\
 \n\
-ChunkSize : a vector specifying the chunk size. Note that any\n\
+@table @asis\n\
+@item @option{Datatype}\n\
+one of the strings @samp{double} @samp{single} @samp{uint64} @samp{uint32} @samp{uint16} @samp{uint8} @samp{int64} @samp{int32} @samp{int16} @samp{int8} \n\
+\n\
+@item @option{ChunkSize}\n\
+a vector specifying the chunk size. Note that any\n\
 dataset with an unlimited dimension must be chunked.\n\
+The default value is an empty vector [], which means no chunking.\n\
+@end table\n\
 \n\
 @seealso{h5write}\n\
 @end deftypefn")
