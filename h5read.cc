@@ -1,7 +1,7 @@
 /*
  *
- *    Copyright 2012 Tom Mullins
- *    Copyright 2015 Tom Mullins, Thorsten Liebig, Stefan Großhauser
+ *    Copyright (C) 2012 Tom Mullins
+ *    Copyright (C) 2015 Tom Mullins, Thorsten Liebig, Stefan Großhauser
  *
  *
  *    This file is part of hdf5oct.
@@ -24,10 +24,15 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
-
+// integrated into the GNU Octave build
+#include "oct.h"
+#include "lo-ieee.h"
+#else
+// as a package
 #include <octave/oct.h>
 #include <octave/lo-ieee.h>
+#endif
+
 #include <cstdlib>
 #include <cerrno>
 #include <iostream>
@@ -1491,31 +1496,8 @@ H5File::create_dset(const char *location, const Matrix& size,
 
 }
 
-
-bool
-hdf5_types_compatible (hid_t t1, hid_t t2)
-{
-  int n;
-  if ((n = H5Tget_nmembers (t1)) != H5Tget_nmembers (t2))
-    return false;
-
-  for (int i = 0; i < n; ++i)
-    {
-      hid_t mt1 = H5Tget_member_type (t1, i);
-      hid_t mt2 = H5Tget_member_type (t2, i);
-
-      if (H5Tget_class (mt1) != H5Tget_class (mt2))
-	return false;
-
-      H5Tclose (mt2);
-      H5Tclose (mt1);
-    }
-
-  return true;
-}
-
 hid_t
-hdf5_make_complex_type (hid_t num_type)
+H5File::hdf5_make_complex_type (hid_t num_type)
 {
   hid_t type_id = H5Tcreate (H5T_COMPOUND, sizeof (double) * 2);
 
@@ -1524,5 +1506,6 @@ hdf5_make_complex_type (hid_t num_type)
 
   return type_id;
 }
+
 
 #endif

@@ -23,9 +23,13 @@
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
+// integrated into the GNU Octave build
+#include "oct.h"
+#else
+// as a package
+#include <octave/oct.h>
 #endif
 
-#include <octave/oct.h>
 
 #if defined(HAVE_HDF5) && defined(HAVE_HDF5_18)
 #include <hdf5.h>
@@ -79,9 +83,10 @@ private:
   
   int open_dset(const char *dsetname);
   octave_value read_dset();
-};
 
-bool hdf5_types_compatible (hid_t t1, hid_t t2);
-hid_t hdf5_make_complex_type (hid_t num_type);
+  hid_t hdf5_make_complex_type (hid_t num_type);
+ };
+
+
 
 #endif
