@@ -1,28 +1,52 @@
-octs=h5read.oct
-objs=$(octs:.oct=.o) h5file.o
-docs=$(octs:.oct=.doc)
-hdrs=$(docs:.doc=.doc.h)
+CXX=h5c++
+src= h5read.cc
+headers=h5read.h
+octs=$(src:.cc=.oct)
+objs=$(src:.cc=.o)
+testobjs=test/write_test.o
+MKOCTFILE=CXX=$(CXX) mkoctfile -g
 
-all: $(octs) test.h5
+VERSION=0.2.0
+PACKAGEFILE=hdf5oct-$(VERSION).tar.gz
 
-h5file.o:
-h5read.o: h5read.doc.h
-h5write.o: h5write.doc.h
+.PHONY: test clean install uninstall package
 
-%.oct: %.o h5file.o
-	mkoctfile -o $@ $< h5file.o -lhdf5
+all: $(octs) package
 
-%.o: %.cpp h5file.h
-	mkoctfile -c $<
+%.oct: $(objs)
+	$(MKOCTFILE) -o $@ $(objs)
 
-%.doc.h: %.doc
-	xxd -i $< | sed 's/\(0x..\)$$/\1, 0x00/' > $@
+%.o: %.cc $(headers)
+	$(MKOCTFILE) -c $<
 
 clean:
-	rm -f $(objs) $(octs) $(hdrs) write_test test.h5
+	rm -f *.o *.oct package/inst/* $(testobjs) test/write_test test/test*.h5 $(PACKAGEFILE)
 
-test.h5: write_test
-	./write_test
+install: $(PACKAGEFILE)
+	@echo "-- Install Octave Package ------------"
+	octave --silent --no-gui --eval "pkg install $(PACKAGEFILE)"
 
-write_test: write_test.cpp
-	g++ -o $@ $< -lhdf5
+uninstall:
+	@echo "-- Uninstall Octave Package ----------"
+	octave --silent --no-gui --eval "pkg uninstall hdf5oct"
+
+package: $(PACKAGEFILE)
+
+$(PACKAGEFILE): $(octs)
+	@echo "-- Create Octave Package Archive ------------"
+	mkdir -p package/inst
+	cp *.oct package/inst
+	tar -czf $(PACKAGEFILE) package/
+
+# TESTING ###########
+
+# a minimal program to generate some testdata
+test/write_test: test/write_test.cc
+	$(CXX) -o $@ $< -lhdf5
+
+# a target to test the octave functions
+test: test/write_test
+	@echo "-- Perform Tests --------------"
+	rm -f test/test*.h5
+	cd test && ./write_test
+	cd test && octave --silent --no-gui h5test.m

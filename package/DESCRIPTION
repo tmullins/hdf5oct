@@ -1,0 +1,11 @@
+Name: hdf5oct
+Version: 0.2.0
+Date: 2015-10-02
+Author: Tom Mullins, Anton Starikov, Thorsten Liebig, Stefan Großhauser
+Maintainer: Stefan Großhauser <Stefan.Grosshauser@uni-bayreuth.de>
+Categories: IO
+Title: a HDF5 wrapper for GNU Octave
+Url: https://github.com/stegro/hdf5oct
+Description: Currently this package provides a rather small number of
+ function, in order to access datasets and attributes of HDF5 files.
+License: LGPLv3+
