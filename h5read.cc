@@ -59,7 +59,7 @@ any_int_leq_zero (const Matrix& mat)
   for (int i = 0; i < mat.length (); i++)
     {
       if (mat(i) < 0.5)
-	return true;
+        return true;
     }
   return false;
 }
@@ -269,7 +269,7 @@ exists, it will be overwritten.\n\
 \n\
 If more than three arguments are specified, an error will be raised if\n\
 the file @var{filename} or the dataset @var{dsetname} do not exist\n\
-(use @code{h5create} in order to create an file or an empty dataset).\n	\
+(use @code{h5create} in order to create an file or an empty dataset).\n \
 If the dataset exists, the data will be written into the specified \n\
 hyperslab. This way it is possible to append data to existing datasets,\n\
 provided their maximum size is sufficiently large.\n\

@@ -37,31 +37,31 @@
 class H5File
 {
   
-public:
+ public:
   
-H5File (const char *filename, const bool create_if_nonexisting);
+  H5File (const char *filename, const bool create_if_nonexisting);
   
   ~H5File ();
   
   octave_value read_dset_complete (const char *dsetname);
   octave_value read_dset_hyperslab (const char *dsetname,
-				   const Matrix& start, const Matrix& count,
-				   const Matrix& stride, const Matrix& block,
-				   int nargin);
+                                    const Matrix& start, const Matrix& count,
+                                    const Matrix& stride, const Matrix& block,
+                                    int nargin);
 
   void write_dset (const char *location,
-		  const octave_value ov_data);
+                   const octave_value ov_data);
   void write_dset_hyperslab (const char *location,
-			    const octave_value ov_data,
-			    const Matrix& start, const Matrix& count,
-			    const Matrix& stride, const Matrix& block,
-			    int nargin);
+                             const octave_value ov_data,
+                             const Matrix& start, const Matrix& count,
+                             const Matrix& stride, const Matrix& block,
+                             int nargin);
   octave_value read_att (const char *location, const char *attname);
   void write_att (const char *location, const char *attname,
-		 const octave_value& attvalue);
+                  const octave_value& attvalue);
   void create_dset (const char *location, const Matrix& size,
-		   const char *datatype, const Matrix& chunksize);
-private:
+                    const char *datatype, const Matrix& chunksize);
+ private:
   const static int ALLOC_HSIZE_INFZERO_TO_UNLIMITED = 1;
   const static int ALLOC_HSIZE_INF_TO_ZERO = 2;
   const static int ALLOC_HSIZE_DEFAULT = 3;
@@ -92,7 +92,7 @@ private:
 
   template <typename T> hsize_t* alloc_hsize (const T& dim, const int inf_zero_treatment_mode);
 
- };
+};
 
 
 
