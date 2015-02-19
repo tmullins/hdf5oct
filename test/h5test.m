@@ -39,15 +39,15 @@ dims = [4, 8, 3, 2];
 
 global d;
 d = {(1:dims(1))'};
-for i = 2:4
-  i_dims = dims(1:i);
-  d{i} = zeros(i_dims);
-  for j = 1:i
+for k = 2:4
+  i_dims = dims(1:k);
+  d{k} = zeros(i_dims);
+  for j = 1:k
     perm = i_dims;
     perm(j) = 1;
     M = 10^(j-1) * (1:i_dims(j))';
-    M = permute(M, [2:j, 1, j+1:i]);
-    d{i} += repmat(M, perm);
+    M = permute(M, [2:j, 1, j+1:k]);
+    d{k} += repmat(M, perm);
   end
 end
 
@@ -57,12 +57,12 @@ function mat = hyperslab(mat, rank, start, count, stride, block)
   stride = [stride, ones(1, 4-rank)];
   block = [block, ones(1, 4-rank)];
   idx = {};
-  for i = 1:4
-    idx{i} = [];
-    for b = 0:(block(i)-1)
-      idx{i} = [idx{i}, (start(i)+b) : stride(i) : (count(i)*stride(i)-1+start(i)+b)];
+  for k = 1:4
+    idx{k} = [];
+    for b = 0:(block(k)-1)
+      idx{k} = [idx{k}, (start(k)+b) : stride(k) : (count(k)*stride(k)-1+start(k)+b)];
     end
-    idx{i} = sort(idx{i});
+    idx{k} = sort(idx{k});
   end
   mat = mat(idx{1}, idx{2}, idx{3}, idx{4});
 end
@@ -85,7 +85,7 @@ function check_slice(filename, rank, start=[], count=[], stride=[], block=[])
     comp = hyperslab(d{rank}, rank, start, count, stride, block);
   else
     data = h5read(filename, dataset);
-    if rank == 0
+    if (rank == 0)
       comp = 0;
     else
       comp = d{rank};
@@ -108,30 +108,30 @@ disp("Test h5create and h5write hyperslabs...")
 chunksize = [1 3 2];
 h5create("test.h5","/created_dset1",[ Inf 3 2],'ChunkSize',chunksize)
 
-i=0;
-%h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**i,chunksize), [ 1+chunksize(1)*i, 1, 1], chunksize)
-i = i+1;
-start = [ 1+chunksize(1)*i, 1, 1];
-h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**i,chunksize), start, chunksize)
-i = i+1
-start = [ 1+chunksize(1)*i, 1, 1];
-h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**i,chunksize), start, chunksize)
+k=0;
+%h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**k,chunksize), [ 1+chunksize(1)*k, 1, 1], chunksize)
+k = k+1;
+start = [ 1+chunksize(1)*k, 1, 1];
+h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**k,chunksize), start, chunksize)
+k = k+1
+start = [ 1+chunksize(1)*k, 1, 1];
+h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**k,chunksize), start, chunksize)
 %%%%%%%%
 h5create("test.h5","/created_dset_single",[ 2 3 4],'Datatype','single')
 %%%%%%%%
-h5create("test.h5","/created_dset_inf1",[ Inf Inf 4],'Datatype','uint64', 'ChunkSize', [10 2 4])
+h5create("test.h5","/created_dset_inf1",[ Inf Inf 4],'Datatype','uint16', 'ChunkSize', [10 2 4])
 %%%%%%%%
 chunksize = [2 3 2];
 h5create("test.h5","created_dset_inf2",[ 2 3 Inf],'Datatype','uint32', 'ChunkSize', chunksize)
-i=0;
-%h5write("test.h5","/created_dset_inf2",reshape((1:prod(chunksize))*10**i,chunksize), [ 1+chunksize(1)*i, 1, 1], chunksize)
-i = i+1;
-i = i+1;
+k=0;
+%h5write("test.h5","/created_dset_inf2",reshape((1:prod(chunksize))*10**k,chunksize), [ 1+chunksize(1)*k, 1, 1], chunksize)
+k = k+1;
+k = k+1;
 start = [ 1,1,1+chunksize(1)*i];
-h5write("test.h5","/created_dset_inf2",reshape((1:prod(chunksize))*10**i,chunksize), start, chunksize)
-i = i+1;
+h5write("test.h5","/created_dset_inf2",cast(reshape((1:prod(chunksize))*10**k,chunksize),'double'), start, chunksize)
+k = k+1;
 start = [ 1,1,1+chunksize(1)*i];
-h5write("test.h5","/created_dset_inf2",reshape((1:prod(chunksize))*10**i,chunksize), start, chunksize)
+h5write("test.h5","/created_dset_inf2",cast(reshape((1:prod(chunksize))*10**k,chunksize),'uint32'), start, chunksize)
 
 %%%%%%%%
 h5create("test.h5","created_dset_inf23",[ 2 3 4],'Datatype','int8', 'ChunkSize', [2 3 2])
@@ -176,20 +176,23 @@ function check_dset(location, data)
 	 end
 end
 
+h5write("test.h5","/rangetest",1:10)
+h5write("test.h5","/rangetest2",transpose(1:0.2:2))
+
 s=5
-range = 1:s**1;
-%check_dset('/foo1_range_int', "range")
-matrix = reshape(cast(range,'int64'), length(range),1);
+range = cast(1:s**1,'int32');
+check_dset('/foo1_range', "range")
+matrix = reshape(cast(range,'int16'), length(range),1);
 check_dset('/foo1_int', "matrix")
-matrix = reshape(cast(1:s**2,'int64'), [s s]);
+matrix = reshape(cast(1:s**2,'int8'), [s s]);
 check_dset('/foo2_int', "matrix")
-matrix =reshape(cast(1:s**3,'int64'), [s s s]);
+matrix =reshape(cast(1:s**3,'uint32'), [s s s]);
 check_dset('/foo3_int', "matrix")
-matrix =reshape(cast(1:s**4,'int64'), [s s s s]);
+matrix =reshape(cast(1:s**4,'uint32'), [s s s s]);
 check_dset('/foo4_int', "matrix")
 
 range =(1:s**1)*0.1;
-%check_dset('/foo1_double', "range")
+check_dset('/foo1_anotherrange', "range")
 matrix = reshape(range, length(range),1);
 check_dset('/foo1_double', "matrix")
 matrix =reshape((1:s**2)*0.1, [s s]);
@@ -200,9 +203,14 @@ matrix =reshape((1:s**4)*0.1, [s s s s]);
 check_dset('/foo4_double', "matrix")
 
 disp("Test h5write and h5read to subgroups...")
-matrix = reshape(cast(1:s**2,'int64'), [s s]);
+matrix = reshape(cast(1:s**2,'int32'), [s s]);
 check_dset('/foo/foo2_int', "matrix")
 check_dset('/bar1/bar2/foo2_int', "matrix")
+
+disp("Test h5write and h5read for complex data...")
+matrix = reshape((1:s**3)*0.1, [s s s]);
+matrix = matrix + i*matrix*0.01;
+check_dset('/foo_complex', "matrix")
 
 disp("Test h5writeatt and h5readatt...")
 
@@ -236,7 +244,7 @@ check_att("/","testatt_double_NA")
 testatt2_double = reshape(0.1:0.1:0.5, [5, 1]);
 %check_att("/","testatt2_double")
 
-testatt_int = cast(7,'int64')
+testatt_int = cast(7,'int32')
 check_att("/","testatt_int")
 % check writing to an existing attribute of a different type
 testatt_int = 7.5;

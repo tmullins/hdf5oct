@@ -61,17 +61,15 @@ To uninstall the package you may want to use
 
 # TODO #################################
 
-- write h5info
+- FIX the treatment of vectors (they get transposed at the moment...)
+
+- write h5info, h5disp
 
 - support compression flags
 
 - read string typed datasets
 
 - read string-array typed attributes
-
-- document how to read complex data
-
-- write complex data in the same way as it is read
 
 - maybe use hdf5's c++ interface instead of the c interace.
 

@@ -46,9 +46,9 @@ H5File(const char *filename, const bool create_if_nonexisting);
 				   int nargin);
 
   void write_dset(const char *location,
-		  const NDArray& data);
+		  const octave_value ov_data);
   void write_dset_hyperslab(const char *location,
-			    const NDArray& data,
+			    const octave_value ov_data,
 			    const Matrix& start, const Matrix& count,
 			    const Matrix& stride, const Matrix& block,
 			    int nargin);

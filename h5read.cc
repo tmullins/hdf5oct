@@ -38,6 +38,10 @@
 
 using namespace std;
 
+#define ALLOC_HSIZE_INFZERO_TO_UNLIMITED 1
+#define ALLOC_HSIZE_INF_TO_ZERO 2
+#define ALLOC_HSIZE_DEFAULT 3
+
 #if ((H5_VERS_MAJOR > 1) || (H5_VERS_MINOR >= 8))
 // define this in case there is no configure script at work. This
 // should not be necessary any more when integrated into core.
@@ -136,6 +140,13 @@ are read in that dimension (this is not valid for @code{h5write}).\n\
 @var{stride} is the offset between the start of each block. \n\
 Defaults to a vector of ones.\n\
 @var{block} is the size of each block to read. Defaults to a vector of ones.\n\
+\n\
+Datasets having a compound type consisting of two double values will\n\
+be interpreted as complex valued.\n\
+\n\
+Generally this function tries to use the Octave datatype of\n\
+the appropriate size for the given HDF5 type.\n\
+\n\
 @seealso{h5write}\n\
 @end deftypefn")
 {
@@ -275,6 +286,12 @@ are not valid elements here.\n\
 Defaults to a vector of ones.\n\
 @var{block} is the size of each block to read. Defaults to a vector of ones.\n\
 \n\
+Complex valued data will lead to datasets having a compound type consisting\n\
+of two double values.\n\
+\n\
+Generally this function tries to use the HDF5 datatype of\n\
+the appropriate size for the given Octave type.\n\
+\n\
 @seealso{h5read}\n\
 @end deftypefn")
 {
@@ -296,7 +313,6 @@ Defaults to a vector of ones.\n\
     }
   string filename = args(0).string_value();
   string location = args(1).string_value();
-  NDArray data = args(2).array_value();
   
   if (error_state)
     return octave_value_list();
@@ -309,7 +325,7 @@ Defaults to a vector of ones.\n\
       if (error_state)
 	return octave_value_list();
       file.write_dset(location.c_str(),
-		      data);
+		      args(2));
     }
   else	
     {
@@ -340,7 +356,7 @@ Defaults to a vector of ones.\n\
 	return octave_value_list();
 
       file.write_dset_hyperslab(location.c_str(),
-				data,
+				args(2),
 				start, count, stride, block, nargin-3);
     }
 
@@ -579,9 +595,6 @@ template <typename T>
 hsize_t*
 alloc_hsize(const T& dim, const int inf_zero_treatment_mode)
 {
-#define ALLOC_HSIZE_INFZERO_TO_UNLIMITED 1
-#define ALLOC_HSIZE_INF_TO_ZERO 2
-#define ALLOC_HSIZE_DEFAULT 3
   int rank = dim.length();
   hsize_t *hsize = (hsize_t*)malloc(rank * sizeof(hsize_t));
   for (int i = 0; i < rank; i++)
@@ -769,14 +782,7 @@ H5File::read_dset()
 {
   bool is_cmplx = false;
   type_id = H5Dget_type(dset_id);
-  hid_t type_class_id = H5Tget_class(type_id);
-  
-  if (type_class_id == H5T_COMPOUND)
-    {
-      hid_t complex_type = hdf5_make_complex_type(H5T_NATIVE_DOUBLE);
-      if (hdf5_types_compatible(type_id, complex_type))
-	is_cmplx = true;
-    }
+  hid_t complex_type_id = hdf5_make_complex_type(H5T_NATIVE_DOUBLE);
 
   Matrix perm_vec(1, rank);
   if (rank >= 2)
@@ -798,41 +804,109 @@ H5File::read_dset()
   hid_t memspace_id = H5Screate_simple(rank, hmem, hmem);
   free(hmem);
 
+  octave_value retval;
   herr_t read_result;
-  if (is_cmplx)
+  if (H5Tequal(type_id, complex_type_id) > 0)
     {
-      ComplexNDArray retval(mat_dims); 
-      read_result = H5Dread(dset_id,
-			    hdf5_make_complex_type(H5T_NATIVE_DOUBLE),
-			    memspace_id, dspace_id,
-			    H5P_DEFAULT, retval.fortran_vec());
-      if (read_result < 0)
-	return octave_value_list();
-      if (rank >= 2)
-	retval = retval.permute(perm_vec, false);
-      return octave_value(retval);
+      ComplexNDArray ret(mat_dims);
+#define READ_AND_PERMUTE(type) read_result = H5Dread(dset_id,		\
+					       type,			\
+					       memspace_id, dspace_id,	\
+					       H5P_DEFAULT, ret.fortran_vec());	\
+      if (read_result < 0)						\
+	{								\
+	  error("error when reading dataset");				\
+	  return octave_value_list();					\
+	}								\
+      if(rank >= 2)							\
+	ret = ret.permute(perm_vec, false);				\
+      retval = octave_value(ret)
+      
+      READ_AND_PERMUTE(type_id);
+    }
+  else if(H5Tget_class(type_id) == H5T_INTEGER)
+    {
+      switch(H5Tget_size(type_id)*8)
+	{
+	case 64:
+	  if(H5Tget_sign(type_id) == H5T_SGN_NONE)
+	    {
+	      uint64NDArray ret(mat_dims);
+	      READ_AND_PERMUTE(type_id);
+	      break;
+	    }
+	  else
+	    {
+	      int64NDArray ret(mat_dims);
+	      READ_AND_PERMUTE(type_id);
+	      break;
+	    }
+	  break;
+	case 32:
+	  if(H5Tget_sign(type_id) == H5T_SGN_NONE)
+	    {
+	      uint32NDArray ret(mat_dims);
+	      READ_AND_PERMUTE(type_id);
+	      break;
+	    }
+	  else
+	    {
+	      int32NDArray ret(mat_dims);
+	      READ_AND_PERMUTE(type_id);
+	      break;
+	    }
+	  break;
+	case 16:
+	  if(H5Tget_sign(type_id) == H5T_SGN_NONE)
+	    {
+	      uint16NDArray ret(mat_dims);
+	      READ_AND_PERMUTE(type_id);
+	      break;
+	    }
+	  else
+	    {
+	      int16NDArray ret(mat_dims);
+	      READ_AND_PERMUTE(type_id);
+	      break;
+	    }
+	  break;
+	case 8:
+	  if(H5Tget_sign(type_id) == H5T_SGN_NONE)
+	    {
+	      uint8NDArray ret(mat_dims);
+	      READ_AND_PERMUTE(type_id);
+	      break;
+	    }
+	  else
+	    {
+	      int8NDArray ret(mat_dims);
+	      READ_AND_PERMUTE(type_id);
+	      break;
+	    }
+	  break;
+	default:
+	  {
+	    error("unknown integer size %d", H5Tget_size(type_id));
+	    NDArray ret(mat_dims);
+	    READ_AND_PERMUTE(type_id);
+	  }
+	}
     }
   else
     {
-      NDArray retval(mat_dims);
-      read_result = H5Dread(dset_id,
-			    H5T_NATIVE_DOUBLE,
-			    memspace_id, dspace_id,
-			    H5P_DEFAULT, retval.fortran_vec());
-      if (read_result < 0)
-	return octave_value_list();
-      else if (rank >= 2)
-	retval = retval.permute(perm_vec, false);
-
-      return octave_value(retval);
+      NDArray ret(mat_dims);
+      READ_AND_PERMUTE(H5T_NATIVE_DOUBLE);
     }
+  H5Tclose(complex_type_id);
+  
+  return retval;
 }
 
 void
 H5File::write_dset(const char *dsetname,
-		   const NDArray& data)
+		   const octave_value ov_data)
 {
-  int rank = data.dims().length();
+  int rank = ov_data.dims().length();
   // create a dims vector where the elements are reversed with respect
   // to the octave matrix.
   dim_vector new_mat_dims;
@@ -842,16 +916,24 @@ H5File::write_dset(const char *dsetname,
     {
       int j = rank-i-1;
       if(rank >= 2)
-	new_mat_dims(i) = data.dims()(j);
+	new_mat_dims(i) = ov_data.dims()(j);
       else
 	// this is not yet correct, a onedimensional matrix is transposed
-	new_mat_dims(i) = data.dims()(i);
+	new_mat_dims(i) = ov_data.dims()(i);
       
       perm_vec(i) = j;
     }
   hsize_t *dims = alloc_hsize(new_mat_dims, ALLOC_HSIZE_DEFAULT);
   dspace_id = H5Screate_simple(rank, dims, NULL);
   free(dims);
+
+  // determine the endianness of this system
+  H5T_order_t o = H5Tget_order(H5T_NATIVE_INT);
+  if(o == H5T_ORDER_ERROR)
+    {
+      error("HDF5 lib could not determine endianness of current system");
+      return;
+    }
 
   //check if all groups in the path dsetname exist. if not, create them
   string path(dsetname);
@@ -866,29 +948,108 @@ H5File::write_dset(const char *dsetname,
 	    }
 	}
     }
-  
-  //check if the data set already exists. if it does, open it,
-  //otherwise, create it.
-  if(H5Lexists(file,dsetname,H5P_DEFAULT))
+
+  herr_t status;
+  // find the right type
+  if(ov_data.is_complex_type())
     {
-      if(open_dset(dsetname) < 0)
+      //check if the data set already exists. if it does, open it,
+      //otherwise, create it.  Furthermore check if the datatype is
+      //compliant with given octave data.
+  
+      // FIXME the way it's done here, a vector is transposed! how can one
+      // avoid this?
+#define OPEN_AND_WRITE if(H5Lexists(file,dsetname,H5P_DEFAULT))		\
+	{								\
+	  if(open_dset(dsetname) < 0)					\
+	    {								\
+	      error("Could not open existing dataset in order to write to"); \
+	      return;							\
+	    }								\
+	}								\
+      else								\
+	dset_id = H5Dcreate(file, dsetname, type_id, dspace_id,		\
+			    H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);	\
+									\
+      status = H5Dwrite(dset_id, type_id,				\
+			H5S_ALL, H5S_ALL, H5P_DEFAULT,			\
+			data.permute(perm_vec,true).fortran_vec())
+  
+      type_id = hdf5_make_complex_type(H5T_NATIVE_DOUBLE);
+      ComplexNDArray data = ov_data.complex_array_value();
+      OPEN_AND_WRITE;
+  }
+  else if(ov_data.is_integer_type())
+    {
+      if(ov_data.is_uint64_type())
 	{
-	  error("Could not open existing dataset in order to write to");
+	  uint64NDArray data = ov_data.uint64_array_value();
+	  type_id = H5Tcopy(o == H5T_ORDER_LE ? H5T_STD_U64LE : H5T_STD_U64BE);
+	  OPEN_AND_WRITE;
 	}
+      else if(ov_data.is_uint32_type())
+	{
+	  uint32NDArray data = ov_data.uint32_array_value();
+	  type_id = H5Tcopy(o == H5T_ORDER_LE ? H5T_STD_U32LE : H5T_STD_U32BE);
+	  OPEN_AND_WRITE;
+	}
+      else if(ov_data.is_uint16_type())
+	{
+	  uint16NDArray data = ov_data.uint16_array_value();
+	  type_id = H5Tcopy(o == H5T_ORDER_LE ? H5T_STD_U16LE : H5T_STD_U16BE);
+	  OPEN_AND_WRITE;
+	}
+      else if(ov_data.is_uint8_type())
+	{
+	  uint8NDArray data = ov_data.uint8_array_value();
+	  type_id = H5Tcopy(o == H5T_ORDER_LE ? H5T_STD_U8LE : H5T_STD_U8BE);
+	  OPEN_AND_WRITE;
+	}
+      else if(ov_data.is_int64_type())
+	{
+	  int64NDArray data = ov_data.int64_array_value();
+	  type_id = H5Tcopy(o == H5T_ORDER_LE ? H5T_STD_I64LE : H5T_STD_I64BE);
+	  OPEN_AND_WRITE;
+	}
+      else if(ov_data.is_int32_type())
+	{
+	  int32NDArray data = ov_data.int32_array_value();
+	  type_id = H5Tcopy(o == H5T_ORDER_LE ? H5T_STD_I32LE : H5T_STD_I32BE);
+	  OPEN_AND_WRITE;
+	}
+      else if(ov_data.is_int16_type())
+	{
+	  int16NDArray data = ov_data.int16_array_value();
+	  type_id = H5Tcopy(o == H5T_ORDER_LE ? H5T_STD_I16LE : H5T_STD_I16BE);
+	  OPEN_AND_WRITE;
+	}
+      else if(ov_data.is_int8_type())
+	{
+	  int8NDArray data = ov_data.int8_array_value();
+	  type_id = H5Tcopy(o == H5T_ORDER_LE ? H5T_STD_I8LE : H5T_STD_I8BE);
+	  OPEN_AND_WRITE;
+	}
+      else
+	{
+	  uint64NDArray data = ov_data.uint64_array_value();
+	  type_id = H5Tcopy(H5T_NATIVE_INT);
+	  OPEN_AND_WRITE;
+	}
+      
+    }
+  else if(ov_data.is_single_type())
+    {
+      FloatNDArray data = ov_data.float_array_value();
+      type_id = H5Tcopy(H5T_NATIVE_FLOAT);
+      OPEN_AND_WRITE;
     }
   else
-    dset_id = H5Dcreate(file, dsetname, H5T_NATIVE_DOUBLE, dspace_id,
-			H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  herr_t status;
-  if(rank >= 2)
-    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
-	     H5S_ALL, H5S_ALL, H5P_DEFAULT,
-	     data.permute(perm_vec,true).fortran_vec());
-  else
-    // this is not yet correct, a onedimensional matrix is transposed
-    status = H5Dwrite(dset_id, H5T_NATIVE_DOUBLE,
-	     H5S_ALL, H5S_ALL, H5P_DEFAULT,
-	     data.fortran_vec());
+    {
+      NDArray data = ov_data.array_value();
+      type_id = H5Tcopy(H5T_NATIVE_DOUBLE);
+      OPEN_AND_WRITE;
+    }
+
   if(status < 0)
     {
       error("error when writing the dataset %s", dsetname);
@@ -899,14 +1060,17 @@ H5File::write_dset(const char *dsetname,
 
 void
 H5File::write_dset_hyperslab(const char *dsetname,
-			     const NDArray& data,
+  			     const octave_value ov_data,
 			     const Matrix& start, const Matrix& count,
 			     const Matrix& stride, const Matrix& block,
 			     int nargin)
 {
+  NDArray data = ov_data.array_value();
+
   if(open_dset(dsetname) < 0)
     return;
-  
+
+  // check if the given hyperslab settings are reasonable
   if (rank == 0 && !(start.is_empty() && count.is_empty()
 		     && stride.is_empty() && block.is_empty()))
     {
@@ -1219,7 +1383,7 @@ H5File::write_att(const char *location, const char *attname,
     }
    else if(attvalue.is_real_type())
     {
-      type_id = H5Tcopy(H5T_IEEE_F64LE);
+      type_id = H5Tcopy(H5T_NATIVE_DOUBLE);
       mem_type_id = H5Tcopy(H5T_NATIVE_DOUBLE);
       attval_double = attvalue.double_value();
       buf = (void *) &attval_double;
@@ -1258,25 +1422,25 @@ void
 H5File::create_dset(const char *location, const Matrix& size,
 		    const char *datatype, const Matrix& chunksize)
 {
-  if(strcmp(datatype,"double"))
+  if(strcmp(datatype,"double") == 0)
     type_id =  H5Tcopy(H5T_NATIVE_DOUBLE);
-  else if(strcmp(datatype,"single"))
+  else if(strcmp(datatype,"single") == 0)
     type_id =  H5Tcopy(H5T_NATIVE_FLOAT);
-  else if(strcmp(datatype,"uint64"))
+  else if(strcmp(datatype,"uint64") == 0)
     type_id =  H5Tcopy(H5T_STD_U64LE);
-  else if(strcmp(datatype,"uint32"))
+  else if(strcmp(datatype,"uint32") == 0)
     type_id =  H5Tcopy(H5T_STD_U32LE);
-  else if(strcmp(datatype,"uint16"))
+  else if(strcmp(datatype,"uint16") == 0)
     type_id =  H5Tcopy(H5T_STD_U16LE);
-  else if(strcmp(datatype,"uint8"))
+  else if(strcmp(datatype,"uint8") == 0)
     type_id =  H5Tcopy(H5T_STD_U8LE);
-  else if(strcmp(datatype,"int64"))
+  else if(strcmp(datatype,"int64") == 0)
     type_id =  H5Tcopy(H5T_STD_I64LE);
-  else if(strcmp(datatype,"int32"))
+  else if(strcmp(datatype,"int32") == 0)
     type_id =  H5Tcopy(H5T_STD_I32LE);
-  else if(strcmp(datatype,"int16"))
+  else if(strcmp(datatype,"int16") == 0)
     type_id =  H5Tcopy(H5T_STD_I16LE);
-  else if(strcmp(datatype,"int8"))
+  else if(strcmp(datatype,"int8") == 0)
     type_id =  H5Tcopy(H5T_STD_I8LE);
   else
     {
