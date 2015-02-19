@@ -825,6 +825,8 @@ H5File::read_dset()
 	}								\
       if(rank >= 2)							\
 	ret = ret.permute(perm_vec, false);				\
+      if(ret.is_vector())						\
+	ret = ret.transpose();						\
       retval = octave_value(ret)
       
       READ_AND_PERMUTE(type_id);
@@ -962,8 +964,6 @@ H5File::write_dset(const char *dsetname,
       //otherwise, create it.  Furthermore check if the datatype is
       //compliant with given octave data.
   
-      // FIXME the way it's done here, a vector is transposed! how can one
-      // avoid this?
 #define OPEN_AND_WRITE if(H5Lexists(file,dsetname,H5P_DEFAULT))		\
 	{								\
 	  if(open_dset(dsetname) < 0)					\

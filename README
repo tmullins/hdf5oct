@@ -61,8 +61,6 @@ To uninstall the package you may want to use
 
 # TODO #################################
 
-- FIX the treatment of vectors (they get transposed at the moment...)
-
 - write h5info, h5disp
 
 - support compression flags

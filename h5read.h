@@ -1,8 +1,8 @@
 /*
  *
  *    Copyright 2012 Tom Mullins
- *
- *
+ *    Copyright 2015 Stefan Großhauser
+  *
  *    This file is part of hdf5oct.
  *
  *    hdf5oct is free software: you can redistribute it and/or modify
