@@ -31,7 +31,7 @@
 #endif
 
 
-#if defined(HAVE_HDF5) && defined(HAVE_HDF5_18)
+#if defined (HAVE_HDF5) && defined (HAVE_HDF5_18)
 #include <hdf5.h>
 
 class H5File
@@ -39,27 +39,27 @@ class H5File
   
 public:
   
-H5File(const char *filename, const bool create_if_nonexisting);
+H5File (const char *filename, const bool create_if_nonexisting);
   
-  ~H5File();
+  ~H5File ();
   
-  octave_value read_dset_complete(const char *dsetname);
-  octave_value read_dset_hyperslab(const char *dsetname,
+  octave_value read_dset_complete (const char *dsetname);
+  octave_value read_dset_hyperslab (const char *dsetname,
 				   const Matrix& start, const Matrix& count,
 				   const Matrix& stride, const Matrix& block,
 				   int nargin);
 
-  void write_dset(const char *location,
+  void write_dset (const char *location,
 		  const octave_value ov_data);
-  void write_dset_hyperslab(const char *location,
+  void write_dset_hyperslab (const char *location,
 			    const octave_value ov_data,
 			    const Matrix& start, const Matrix& count,
 			    const Matrix& stride, const Matrix& block,
 			    int nargin);
-  octave_value read_att(const char *location, const char *attname);
-  void write_att(const char *location, const char *attname,
+  octave_value read_att (const char *location, const char *attname);
+  void write_att (const char *location, const char *attname,
 		 const octave_value& attvalue);
-  void create_dset(const char *location, const Matrix& size,
+  void create_dset (const char *location, const Matrix& size,
 		   const char *datatype, const Matrix& chunksize);
 private:
   const static int ALLOC_HSIZE_INFZERO_TO_UNLIMITED = 1;
@@ -85,12 +85,12 @@ private:
   //dimensions of the returned octave matrix
   dim_vector mat_dims;
   
-  int open_dset(const char *dsetname);
-  octave_value read_dset();
+  int open_dset (const char *dsetname);
+  octave_value read_dset ();
 
   hid_t hdf5_make_complex_type (hid_t num_type);
 
-  template <typename T> hsize_t* alloc_hsize(const T& dim, const int inf_zero_treatment_mode);
+  template <typename T> hsize_t* alloc_hsize (const T& dim, const int inf_zero_treatment_mode);
 
  };
 
