@@ -43,10 +43,6 @@
 
 using namespace std;
 
-#define ALLOC_HSIZE_INFZERO_TO_UNLIMITED 1
-#define ALLOC_HSIZE_INF_TO_ZERO 2
-#define ALLOC_HSIZE_DEFAULT 3
-
 #if ((H5_VERS_MAJOR > 1) || (H5_VERS_MINOR >= 8))
 // define this in case there is no configure script at work. This
 // should not be necessary any more when integrated into core.
@@ -598,7 +594,7 @@ H5File::~H5File()
 // T will be Matrix or dim_vector
 template <typename T>
 hsize_t*
-alloc_hsize(const T& dim, const int inf_zero_treatment_mode)
+H5File::alloc_hsize(const T& dim, const int inf_zero_treatment_mode)
 {
   int rank = dim.length();
   hsize_t *hsize = (hsize_t*)malloc(rank * sizeof(hsize_t));

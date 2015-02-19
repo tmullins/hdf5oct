@@ -1,8 +1,8 @@
 /*
  *
- *    Copyright 2012 Tom Mullins
- *    Copyright 2015 Stefan Großhauser
-  *
+ *    Copyright (C) 2012 Tom Mullins
+ *    Copyright (C) 2015 Tom Mullins, Thorsten Liebig, Stefan Großhauser
+ *
  *    This file is part of hdf5oct.
  *
  *    hdf5oct is free software: you can redistribute it and/or modify
@@ -62,6 +62,10 @@ H5File(const char *filename, const bool create_if_nonexisting);
   void create_dset(const char *location, const Matrix& size,
 		   const char *datatype, const Matrix& chunksize);
 private:
+  const static int ALLOC_HSIZE_INFZERO_TO_UNLIMITED = 1;
+  const static int ALLOC_HSIZE_INF_TO_ZERO = 2;
+  const static int ALLOC_HSIZE_DEFAULT = 3;
+  
   //rank of the hdf5 dataset
   int rank;
   //dimensions of the hdf5 dataset
@@ -85,6 +89,9 @@ private:
   octave_value read_dset();
 
   hid_t hdf5_make_complex_type (hid_t num_type);
+
+  template <typename T> hsize_t* alloc_hsize(const T& dim, const int inf_zero_treatment_mode);
+
  };
 
 
