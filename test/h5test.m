@@ -51,6 +51,10 @@ for k = 2:4
   end
 end
 
+function ret = identical(mat1, mat2)
+
+end
+
 function mat = hyperslab(mat, rank, start, count, stride, block)
   start = [start, ones(1, 4-rank)];
   count = [count, ones(1, 4-rank)];
@@ -122,7 +126,7 @@ h5create("test.h5","/created_dset_single",[ 2 3 4],'Datatype','single')
 h5create("test.h5","/created_dset_inf1",[ Inf Inf 4],'Datatype','uint16', 'ChunkSize', [10 2 4])
 %%%%%%%%
 chunksize = [2 3 2];
-h5create("test.h5","created_dset_inf2",[ 2 3 Inf],'Datatype','uint32', 'ChunkSize', chunksize)
+h5create("test.h5","created_dset_inf2",[ 2 3 Inf],'Datatype','uint64', 'ChunkSize', chunksize)
 k=0;
 %h5write("test.h5","/created_dset_inf2",reshape((1:prod(chunksize))*10**k,chunksize), [ 1+chunksize(1)*k, 1, 1], chunksize)
 k = k+1;
@@ -157,10 +161,14 @@ disp("Test h5write and h5read...")
 function check_dset(location, data)
 	 atttype = evalin("caller",["typeinfo(",data,")"]);
 	 attclass = evalin("caller",["class(",data,")"]);
-	 printf(["write ",num2str(ndims(evalin("caller",data))),"d ",attclass," ",atttype," dataset..."])
+	 printf(["write ",num2str(ndims(evalin("caller",data))),"d ",attclass," ",atttype," dataset ",location,"..."])
 	 h5write("test.h5", location,evalin("caller", data));
 	 printf("and read it..")
 	 readdata = h5read("test.h5", location);
+	 disp("ref:")
+	 disp(evalin("caller", data));
+	 disp("data read from file:")
+	 disp(readdata)
 	 if(all(readdata == evalin("caller", data)))
 	   disp("ok")
 	 elseif(isna(evalin("caller", data)) && isna(readdata))
@@ -179,17 +187,19 @@ end
 h5write("test.h5","/rangetest",1:10)
 h5write("test.h5","/rangetest2",transpose(1:0.2:2))
 
-s=5
+s=3
 range = cast(1:s**1,'int32');
 check_dset('/foo1_range', "range")
 matrix = reshape(cast(range,'int16'), length(range),1);
 check_dset('/foo1_int', "matrix")
-matrix = reshape(cast(1:s**2,'int8'), [s s]);
+matrix = reshape(cast(1:s*(s+1),'int8'), [s s+1]);
 check_dset('/foo2_int', "matrix")
-matrix =reshape(cast(1:s**3,'uint32'), [s s s]);
+matrix =reshape(cast(1:s*(s+1)*(s+2),'uint32'), [s s+1 s+2]);
 check_dset('/foo3_int', "matrix")
-matrix =reshape(cast(1:s**4,'uint32'), [s s s s]);
+matrix =reshape(cast(1:s*(s+1)*(s+2)*(s+3),'uint64'), [s s+1 s+2 s+3]);
 check_dset('/foo4_int', "matrix")
+matrix =reshape(cast(1:s*(s+1)*(s+2)*(s+3),'int64'), [s s+1 s+2 s+3]);
+check_dset('/foo5_int', "matrix")
 
 range =(1:s**1)*0.1;
 check_dset('/foo1_anotherrange', "range")
