@@ -783,7 +783,7 @@ H5File::read_dset ()
 
   octave_value retval;
   herr_t read_result;
-  if (H5Tequal (type_id, complex_type_id) > 0)
+  if (hdf5_complex_types_compatible (type_id, complex_type_id) > 0)
     {
       ComplexNDArray ret (mat_dims);
 #define READ_AND_PERMUTE(type) read_result = H5Dread (dset_id,          \
@@ -797,8 +797,6 @@ H5File::read_dset ()
         }                                                               \
       if (rank >= 2)                                                    \
         ret = ret.permute (perm_vec, false);                            \
-      if (ret.is_vector ())                                             \
-        ret = ret.transpose ();                                         \
       retval = octave_value (ret)
       
       READ_AND_PERMUTE (type_id);
@@ -888,18 +886,14 @@ H5File::write_dset (const char *dsetname,
   int rank = ov_data.dims ().length ();
   // create a dims vector where the elements are reversed with respect
   // to the octave matrix.
-  dim_vector new_mat_dims;
   Matrix perm_vec(1, rank);
-  new_mat_dims.resize (rank);
   for (int i = 0; i < rank; i++)
     {
       int j = rank-i-1;
-      // if (rank >= 2)
-      //        new_mat_dims(i) = ov_data.dims ()(j);
-      new_mat_dims(i) = ov_data.dims ()(i);
       perm_vec(i) = j;
     }
-  hsize_t *dims = alloc_hsize (new_mat_dims, ALLOC_HSIZE_DEFAULT);
+  
+  hsize_t *dims = alloc_hsize (ov_data.dims(), ALLOC_HSIZE_DEFAULT);
   dspace_id = H5Screate_simple (rank, dims, NULL);
   free (dims);
 
@@ -1467,6 +1461,35 @@ H5File::hdf5_make_complex_type (hid_t num_type)
 
   return type_id;
 }
+
+bool
+H5File::hdf5_complex_types_compatible (hid_t t1, hid_t t2)
+{
+  // check if the two types are compound types with numbers as
+  // members.  The names of the members do not have to be the same.
+  if (! (H5Tget_class (t1) == H5T_COMPOUND && H5Tget_class (t2) == H5T_COMPOUND))
+    return false;
+      
+  int n = H5Tget_nmembers (t1);
+  if (n != H5Tget_nmembers (t2))
+    return false;
+
+  for (int i = 0; i < n; ++i)
+    {
+      hid_t mt1 = H5Tget_member_type (t1, i);
+      hid_t mt2 = H5Tget_member_type (t2, i);
+
+      if (H5Tget_class (mt1) != H5Tget_class (mt2))
+        return false;
+
+      H5Tclose (mt2);
+      H5Tclose (mt1);
+    }
+
+  return true;
+}
+
+
 
 
 #endif

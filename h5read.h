@@ -89,6 +89,7 @@ class H5File
   octave_value read_dset ();
 
   hid_t hdf5_make_complex_type (hid_t num_type);
+  bool hdf5_complex_types_compatible (hid_t t1, hid_t t2);
 
   template <typename T> hsize_t* alloc_hsize (const T& dim, const int inf_zero_treatment_mode);
 

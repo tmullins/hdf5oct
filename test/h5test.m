@@ -153,9 +153,6 @@ check_slice("test.h5", 3, [1, 2, 1], [2, 1, 2], [2, 1, 1]);
 check_slice("test.h5", 3, [2, 1, 1], [2, 2, 2], [2, 3, 1], [1, 2, 1]);
 check_slice("test.h5", 4, [2, 1, 1, 2], [2, 2, 2, 1], [2, 3, 1, 3], [1, 2, 1, 1]);
 
-disp("Test h5write hyperslabs...")
-
-
 disp("Test h5write and h5read...")
 
 function check_dset(location, data)
@@ -165,10 +162,12 @@ function check_dset(location, data)
 	 h5write("test.h5", location,evalin("caller", data));
 	 printf("and read it..")
 	 readdata = h5read("test.h5", location);
-	 disp("ref:")
-	 disp(evalin("caller", data));
-	 disp("data read from file:")
-	 disp(readdata)
+
+	 ## disp("ref:")
+	 ## disp(evalin("caller", data));
+	 ## disp("data read from file:")
+	 ## disp(readdata)
+	 
 	 if(all(readdata == evalin("caller", data)))
 	   disp("ok")
 	 elseif(isna(evalin("caller", data)) && isna(readdata))
@@ -221,6 +220,10 @@ disp("Test h5write and h5read for complex data...")
 matrix = reshape((1:s**3)*0.1, [s s s]);
 matrix = matrix + i*matrix*0.01;
 check_dset('/foo_complex', "matrix")
+
+range = (1:s**3)*0.1;
+range = range + i*range*0.01;
+check_dset('/foo_complex_range', "range")
 
 disp("Test h5writeatt and h5readatt...")
 
