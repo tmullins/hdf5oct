@@ -53,6 +53,8 @@ using namespace std;
 #include <hdf5.h>
 #include "h5read.h"
 
+#include "ls-hdf5.h"
+
 bool
 any_int_leq_zero (const Matrix& mat)
 {
@@ -769,7 +771,9 @@ H5File::read_dset ()
 
   octave_value retval;
   herr_t read_result;
-  if (hdf5_complex_types_compatible (type_id, complex_type_id) > 0)
+  if (H5Tget_class (type_id) == H5T_COMPOUND &&
+      H5Tget_class (complex_type_id) == H5T_COMPOUND &&
+      hdf5_types_compatible (type_id, complex_type_id) > 0)
     {
       ComplexNDArray ret (mat_dims);
 #define READ_AND_PERMUTE(type) read_result = H5Dread (dset_id,          \
@@ -1143,6 +1147,12 @@ H5File::read_att (const char *objname, const char *attname)
       return retval;
     }
 
+  if ( !hdf5_check_attr(obj_id, attname))
+    {
+      error ("h5readatt: the object %s does not have an attribute %s", objname, attname);
+      return retval;
+    }
+
   att_id = H5Aopen_name (obj_id, attname);
   if (att_id < 0)
     {
@@ -1426,46 +1436,5 @@ H5File::create_dset (const char *location, const Matrix& size,
   H5Pclose (crp_list);
 
 }
-
-hid_t
-H5File::hdf5_make_complex_type (hid_t num_type)
-{
-  hid_t type_id = H5Tcreate (H5T_COMPOUND, sizeof (double) * 2);
-
-  H5Tinsert (type_id, "real", 0 * sizeof (double), num_type);
-  H5Tinsert (type_id, "imag", 1 * sizeof (double), num_type);
-
-  return type_id;
-}
-
-bool
-H5File::hdf5_complex_types_compatible (hid_t t1, hid_t t2)
-{
-  // check if the two types are compound types with numbers as
-  // members.  The names of the members do not have to be the same.
-  if (! (H5Tget_class (t1) == H5T_COMPOUND && H5Tget_class (t2) == H5T_COMPOUND))
-    return false;
-      
-  int n = H5Tget_nmembers (t1);
-  if (n != H5Tget_nmembers (t2))
-    return false;
-
-  for (int i = 0; i < n; ++i)
-    {
-      hid_t mt1 = H5Tget_member_type (t1, i);
-      hid_t mt2 = H5Tget_member_type (t2, i);
-
-      if (H5Tget_class (mt1) != H5Tget_class (mt2))
-        return false;
-
-      H5Tclose (mt2);
-      H5Tclose (mt1);
-    }
-
-  return true;
-}
-
-
-
 
 #endif

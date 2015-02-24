@@ -81,15 +81,11 @@ class H5File
   hid_t type_id;
   hid_t mem_type_id;
 
-  
   //dimensions of the returned octave matrix
   dim_vector mat_dims;
   
   int open_dset (const char *dsetname);
   octave_value read_dset ();
-
-  hid_t hdf5_make_complex_type (hid_t num_type);
-  bool hdf5_complex_types_compatible (hid_t t1, hid_t t2);
 
   template <typename T> hsize_t* alloc_hsize (const T& dim, const int mode, const bool reverse);
 
