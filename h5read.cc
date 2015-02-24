@@ -578,18 +578,19 @@ H5File::~H5File ()
 // T will be Matrix or dim_vector
 template <typename T>
 hsize_t*
-H5File::alloc_hsize (const T& dim, const int inf_zero_treatment_mode)
+H5File::alloc_hsize (const T& dim, const int mode, const bool reverse)
 {
   int rank = dim.length ();
   hsize_t *hsize = (hsize_t*)malloc (rank * sizeof (hsize_t));
   for (int i = 0; i < rank; i++)
     {
-      if (inf_zero_treatment_mode == ALLOC_HSIZE_INFZERO_TO_UNLIMITED && (dim(i) == octave_Inf || dim(i) == 0))
-        hsize[i] = H5S_UNLIMITED;
-      else if (inf_zero_treatment_mode == ALLOC_HSIZE_INF_TO_ZERO && dim(i) == octave_Inf)
-        hsize[i] = 0;
+      int j = reverse ? rank-i-1 : i;
+      if (mode == ALLOC_HSIZE_INFZERO_TO_UNLIMITED && (dim(i) == octave_Inf || dim(i) == 0))
+        hsize[j] = H5S_UNLIMITED;
+      else if (mode == ALLOC_HSIZE_INF_TO_ZERO && dim(i) == octave_Inf)
+        hsize[j] = 0;
       else
-        hsize[i] = dim(i);
+        hsize[j] = dim(i);
     }
   return hsize;
 }
@@ -608,7 +609,7 @@ H5File::open_dset (const char *dsetname)
   dspace_id = H5Dget_space (dset_id);
   if (dspace_id < 0)
     {
-      error ("Error opening dataspace %s", dsetname);
+      error ("Error opening dataspace of dataset %s", dsetname);
       return -1;
     }
 
@@ -646,7 +647,8 @@ H5File::read_dset_complete (const char *dsetname)
   // we need at least 2 filled
   mat_dims(0) = mat_dims(1) = 1;
   for (int i = 0; i < rank; i++)
-    mat_dims(i) = h5_dims[i];
+    //note that this is reversing the order
+    mat_dims(i) = h5_dims[rank-i-1];
 
   if (H5Sselect_all (dspace_id) < 0)
     {
@@ -733,10 +735,10 @@ H5File::read_dset_hyperslab (const char *dsetname,
         }
     }
 
-  hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hcount = alloc_hsize (_count, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT);
+  hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hcount = alloc_hsize (_count, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT, true);
   // TODO check these (and hmem) for NULLs
 
   herr_t sel_result = H5Sselect_hyperslab (dspace_id, H5S_SELECT_SET, hstart,
@@ -761,23 +763,7 @@ H5File::read_dset ()
   type_id = H5Dget_type (dset_id);
   hid_t complex_type_id = hdf5_make_complex_type (H5T_NATIVE_DOUBLE);
 
-  Matrix perm_vec(1, rank);
-  if (rank >= 2)
-    {
-      // reverse the elements in mat_dims
-      dim_vector new_mat_dims;
-      new_mat_dims.resize (rank);
-      for (int i = 0; i < rank; i++)
-        {
-          int j = rank-i-1;
-          new_mat_dims(i) = mat_dims(j);
-      
-          perm_vec(i) = j;
-        }
-      mat_dims = new_mat_dims;
-    }
-
-  hsize_t *hmem = alloc_hsize (mat_dims, ALLOC_HSIZE_DEFAULT);
+  hsize_t *hmem = alloc_hsize (mat_dims, ALLOC_HSIZE_DEFAULT, false);
   hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
   free (hmem);
 
@@ -795,8 +781,6 @@ H5File::read_dset ()
           error ("error when reading dataset");                         \
           return octave_value_list ();                                  \
         }                                                               \
-      if (rank >= 2)                                                    \
-        ret = ret.permute (perm_vec, false);                            \
       retval = octave_value (ret)
       
       READ_AND_PERMUTE (type_id);
@@ -884,16 +868,8 @@ H5File::write_dset (const char *dsetname,
                     const octave_value ov_data)
 {
   int rank = ov_data.dims ().length ();
-  // create a dims vector where the elements are reversed with respect
-  // to the octave matrix.
-  Matrix perm_vec(1, rank);
-  for (int i = 0; i < rank; i++)
-    {
-      int j = rank-i-1;
-      perm_vec(i) = j;
-    }
-  
-  hsize_t *dims = alloc_hsize (ov_data.dims(), ALLOC_HSIZE_DEFAULT);
+
+  hsize_t *dims = alloc_hsize (ov_data.dims(), ALLOC_HSIZE_DEFAULT, true);
   dspace_id = H5Screate_simple (rank, dims, NULL);
   free (dims);
 
@@ -941,7 +917,7 @@ H5File::write_dset (const char *dsetname,
                                                                         \
       status = H5Dwrite (dset_id, type_id,                              \
                          H5S_ALL, H5S_ALL, H5P_DEFAULT,                 \
-                         data.permute (perm_vec,true).fortran_vec ())
+			 data.fortran_vec ())
   
       type_id = hdf5_make_complex_type (H5T_NATIVE_DOUBLE);
       ComplexNDArray data = ov_data.complex_array_value ();
@@ -1087,24 +1063,24 @@ H5File::write_dset_hyperslab (const char *dsetname,
       // A count value 0 is not allowed when writing data.
 
       int end = start(i) + _stride(i)*(count(i)-1) + _block(i); // exclusive
-      if (h5_maxdims[i] < end)
+      if (h5_maxdims[rank-i-1] < end)
         {
           error ("In dimension %d, the dataset %s may have at max. only %d elements,"
                  " but at least %d are required for requested hyperslab.",
-                 i+1, dsetname, (int)h5_maxdims[i], end);
+                 i+1, dsetname, (int)h5_maxdims[rank-i-1], end);
           return;
         }
 
       // now, the array holding the current dimension of the dataset
       // is changed (if its necessary), so that the new extent can be
       // set later.
-      if (h5_dims[i] < end)
-        h5_dims[i] = end;
+      if (h5_dims[rank-i-1] < end)
+        h5_dims[rank-i-1] = end;
     }
-  hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hcount = alloc_hsize (count, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT);
+  hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hcount = alloc_hsize (count, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT, true);
   // TODO check these (and hmem) for NULLs
   
   // make the current size of the dataset bigger
@@ -1134,7 +1110,7 @@ H5File::write_dset_hyperslab (const char *dsetname,
       return;
     }
   
-  hsize_t *hmem = alloc_hsize (data.dims (), ALLOC_HSIZE_DEFAULT);
+  hsize_t *hmem = alloc_hsize (data.dims (), ALLOC_HSIZE_DEFAULT, false);
   hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
   if (memspace_id < 0)
     {
@@ -1282,7 +1258,7 @@ H5File::write_att (const char *location, const char *attname,
     {
       error ("matrix type attributes are not yet supported.");
       return;
-      // dims = alloc_hsize (attvalue.dims (), ALLOC_HSIZE_DEFAULT);
+      // dims = alloc_hsize (attvalue.dims (), ALLOC_HSIZE_DEFAULT, true);
       // dspace_id = H5Screate_simple (attvalue.dims ().length (), dims, NULL);
       // free (dims);
     }
@@ -1409,9 +1385,9 @@ H5File::create_dset (const char *location, const Matrix& size,
     }
 
   // the size array may contains Infs, which are casted to zeros for..
-  hsize_t *dims = alloc_hsize (size, ALLOC_HSIZE_INF_TO_ZERO);
+  hsize_t *dims = alloc_hsize (size, ALLOC_HSIZE_INF_TO_ZERO, true);
   // and produce unlimited maximum extent for..
-  hsize_t *maxdims = alloc_hsize (size, ALLOC_HSIZE_INFZERO_TO_UNLIMITED);
+  hsize_t *maxdims = alloc_hsize (size, ALLOC_HSIZE_INFZERO_TO_UNLIMITED, true);
   dspace_id = H5Screate_simple (size.nelem (), dims, maxdims);
   free (dims);
   free (maxdims);
@@ -1426,7 +1402,7 @@ H5File::create_dset (const char *location, const Matrix& size,
   if (! chunksize.is_empty ())
     {
       // a dataset with an unlimited dimension must be chunked.
-      hsize_t *dims_chunk = alloc_hsize (chunksize, ALLOC_HSIZE_DEFAULT);
+      hsize_t *dims_chunk = alloc_hsize (chunksize, ALLOC_HSIZE_DEFAULT, true);
       if (H5Pset_layout (crp_list, H5D_CHUNKED) < 0)
         {
           error ("Could not set chunked layout of %s", location);
