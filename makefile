@@ -5,7 +5,7 @@ octs=$(src:.cc=.oct)
 objs=$(src:.cc=.o)
 MKOCTFILE=CXX=$(CXX) mkoctfile -g
 
-VERSION=0.2.0
+VERSION=0.4.0
 PACKAGEFILE=hdf5oct-$(VERSION).tar.gz
 
 .PHONY: test clean install uninstall package

@@ -80,3 +80,5 @@ For integration into octave core:
 
 - make it really clean
 
+- guess chunksize like
+  https://github.com/h5py/h5py/blob/master/h5py/_hl/filters.py#L257

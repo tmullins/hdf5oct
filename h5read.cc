@@ -724,14 +724,14 @@ H5File::read_dset_hyperslab (const char *dsetname,
         {
           // a value of 0 (or Inf) means that as many blocks as possible
           // shall be read in this dimension
-          _count(i) = (h5_dims[i] - start(i) - _block(i)) / _stride(i) + 1;
+          _count(i) = (h5_dims[rank-i-1] - start(i) - _block(i)) / _stride(i) + 1;
         }
       mat_dims(i) = _count(i)*_block(i);
       int end = start(i) + _stride(i)*(_count(i)-1) + _block(i); // exclusive
-      if (h5_dims[i] < end)
+      if (h5_dims[rank-i-1] < end)
         {
           error ("In dimension %d, dataset only has %d elements, but at least %d"
-                 " are required for requested hyperslab", i+1, (int)h5_dims[i],
+                 " are required for requested hyperslab", i+1, (int)h5_dims[rank-i-1],
                  end);
           return octave_value_list ();
         }
@@ -765,9 +765,9 @@ H5File::read_dset ()
   type_id = H5Dget_type (dset_id);
   hid_t complex_type_id = hdf5_make_complex_type (H5T_NATIVE_DOUBLE);
 
-  hsize_t *hmem = alloc_hsize (mat_dims, ALLOC_HSIZE_DEFAULT, false);
-  hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
-  free (hmem);
+  // hsize_t *hmem = alloc_hsize (mat_dims, ALLOC_HSIZE_DEFAULT, false);
+  // hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
+  // free (hmem);
 
   octave_value retval;
   herr_t read_result;
@@ -776,18 +776,20 @@ H5File::read_dset ()
       hdf5_types_compatible (type_id, complex_type_id) > 0)
     {
       ComplexNDArray ret (mat_dims);
-#define READ_AND_PERMUTE(type) read_result = H5Dread (dset_id,          \
-                                                      type,             \
-                                                      memspace_id, dspace_id, \
-                                                      H5P_DEFAULT, ret.fortran_vec ()); \
+      // macro begin
+#define HDF5_READ_DATA(type) read_result = H5Dread (dset_id,		\
+						    type,		\
+						    H5S_ALL, dspace_id, \
+						    H5P_DEFAULT, ret.fortran_vec ()); \
       if (read_result < 0)                                              \
         {                                                               \
           error ("error when reading dataset");                         \
           return octave_value_list ();                                  \
         }                                                               \
       retval = octave_value (ret)
+      // macro end
       
-      READ_AND_PERMUTE (type_id);
+      HDF5_READ_DATA (type_id);
     }
   else if (H5Tget_class (type_id) == H5T_INTEGER)
     {
@@ -797,13 +799,13 @@ H5File::read_dset ()
           if (H5Tget_sign (type_id) == H5T_SGN_NONE)
             {
               uint64NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           else
             {
               int64NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           break;
@@ -811,13 +813,13 @@ H5File::read_dset ()
           if (H5Tget_sign (type_id) == H5T_SGN_NONE)
             {
               uint32NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           else
             {
               int32NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           break;
@@ -825,13 +827,13 @@ H5File::read_dset ()
           if (H5Tget_sign (type_id) == H5T_SGN_NONE)
             {
               uint16NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           else
             {
               int16NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           break;
@@ -839,13 +841,13 @@ H5File::read_dset ()
           if (H5Tget_sign (type_id) == H5T_SGN_NONE)
             {
               uint8NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           else
             {
               int8NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           break;
@@ -853,14 +855,14 @@ H5File::read_dset ()
           {
             error ("unknown integer size %d", H5Tget_size (type_id));
             NDArray ret (mat_dims);
-            READ_AND_PERMUTE (type_id);
+            HDF5_READ_DATA (type_id);
           }
         }
     }
   else
     {
       NDArray ret (mat_dims);
-      READ_AND_PERMUTE (H5T_NATIVE_DOUBLE);
+      HDF5_READ_DATA (H5T_NATIVE_DOUBLE);
     }
   H5Tclose (complex_type_id);
   
