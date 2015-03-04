@@ -770,17 +770,34 @@ H5File::read_dset ()
   // free (hmem);
 
   octave_value retval;
-  herr_t read_result;
   if (H5Tget_class (type_id) == H5T_COMPOUND &&
       H5Tget_class (complex_type_id) == H5T_COMPOUND &&
       hdf5_types_compatible (type_id, complex_type_id) > 0)
     {
       ComplexNDArray ret (mat_dims);
       // macro begin
-#define HDF5_READ_DATA(type) read_result = H5Dread (dset_id,		\
-						    type,		\
-						    H5S_ALL, dspace_id, \
-						    H5P_DEFAULT, ret.fortran_vec ()); \
+#define HDF5_READ_DATA(type)                                            \
+      if (H5Sselect_valid (dspace_id) <= 0)                             \
+        {                                                               \
+          error ("selected dataspace is not valid");                    \
+          return octave_value_list ();                                  \
+        }                                                               \
+                                                                        \
+      int mdc_nelem = -1;                                               \
+      size_t rdcc_nelem = -1;                                           \
+      size_t rdcc_nbytes = -1;                                          \
+      double rdcc_w0 = -1;                                              \
+      if (H5Pget_cache (H5Fget_access_plist (file), &mdc_nelem,         \
+                                &rdcc_nelem, &rdcc_nbytes, &rdcc_w0 ) < 0) \
+        {                                                               \
+          error ("could not determine raw data chunk cache parameters."); \
+          return octave_value_list ();                                  \
+        }                                                               \
+      /*cout << "cache params:" << rdcc_nelem << "," << rdcc_nbytes << endl;*/ \
+      herr_t read_result = H5Dread (dset_id,                            \
+                                    type,                               \
+                                    H5S_ALL, dspace_id,                 \
+                                    H5P_DEFAULT, ret.fortran_vec ());   \
       if (read_result < 0)                                              \
         {                                                               \
           error ("error when reading dataset");                         \
@@ -923,7 +940,7 @@ H5File::write_dset (const char *dsetname,
                                                                         \
       status = H5Dwrite (dset_id, type_id,                              \
                          H5S_ALL, H5S_ALL, H5P_DEFAULT,                 \
-			 data.fortran_vec ())
+                         data.fortran_vec ())
   
       type_id = hdf5_make_complex_type (H5T_NATIVE_DOUBLE);
       ComplexNDArray data = ov_data.complex_array_value ();
