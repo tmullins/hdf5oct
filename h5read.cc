@@ -2,7 +2,7 @@
  *
  *    Copyright (C) 2012 Tom Mullins
  *    Copyright (C) 2015 Tom Mullins, Thorsten Liebig, Stefan Großhauser
- *
+ *    Copyright (C) 2008-2013 Andrew Collette
  *
  *    This file is part of hdf5oct.
  *
@@ -420,6 +420,8 @@ The vector @var{size} may contain one or several Inf (or \n\
 equivalently: zero) values.\n\
 This will lead to unlimited maximum extent of the dataset in the\n\
 respective dimensions and 0 initial extent.\n\
+Note that any dataset with at least one unlimited dimension must be chunked and\n\
+it is generally recommended for large datasets.\n\
 \n\
 The list of @var{key}, @var{val} arguments allows to specify\n\
 certain properties of the dataset. Allowed settings are:\n\
@@ -429,9 +431,11 @@ certain properties of the dataset. Allowed settings are:\n\
 one of the strings @samp{double} @samp{single} @samp{uint64} @samp{uint32} @samp{uint16} @samp{uint8} @samp{int64} @samp{int32} @samp{int16} @samp{int8} \n\
 \n\
 @item @option{ChunkSize}\n\
-a vector specifying the chunk size. Note that any\n\
-dataset with an unlimited dimension must be chunked.\n\
-The default value is an empty vector [], which means no chunking.\n\
+The value may be either a vector specifying the chunk size,\n\
+or an empty vector [], which means no chunking (this is the default),\n\
+or the string @samp{auto} which makes the library choose automatically \n\
+an appropriate chunk size, as best as it can. Note that the @samp{auto}\n\
+setting is not @sc{matlab} compatible.\n\
 @end table\n\
 \n\
 @seealso{h5write}\n\
@@ -485,7 +489,18 @@ The default value is an empty vector [], which means no chunking.\n\
         }
       else if (args(i).string_value () == "ChunkSize")
         {
-          if (! check_vec (args(i+1), chunksize, "ChunkSize", false))
+	  if (args(i+1).is_string ())
+	    {
+	      if(args(i+1).string_value () != "auto")
+		{
+		  error ("ChunkSize argument must be either a vector, or the string 'auto'.");
+		  return octave_value_list ();
+		}
+	      chunksize = args(2).matrix_value ();
+	      chunksize(0) = 0;
+
+	    }
+          else if (! check_vec (args(i+1), chunksize, "ChunkSize", false))
             return octave_value_list ();
         }
       else
@@ -788,7 +803,7 @@ H5File::read_dset ()
       size_t rdcc_nbytes = -1;                                          \
       double rdcc_w0 = -1;                                              \
       if (H5Pget_cache (H5Fget_access_plist (file), &mdc_nelem,         \
-                                &rdcc_nelem, &rdcc_nbytes, &rdcc_w0 ) < 0) \
+                        &rdcc_nelem, &rdcc_nbytes, &rdcc_w0 ) < 0)      \
         {                                                               \
           error ("could not determine raw data chunk cache parameters."); \
           return octave_value_list ();                                  \
@@ -1385,28 +1400,59 @@ You have to save real and imag part separately.");
 
 void
 H5File::create_dset (const char *location, const Matrix& size,
-                     const char *datatype, const Matrix& chunksize)
+                     const char *datatype, Matrix& chunksize)
 {
+  int typesize;
   if (strcmp (datatype,"double") == 0)
-    type_id =  H5Tcopy (H5T_NATIVE_DOUBLE);
+    {
+      type_id = H5Tcopy (H5T_NATIVE_DOUBLE);
+      typesize = sizeof(double);
+    }
   else if (strcmp (datatype,"single") == 0)
-    type_id =  H5Tcopy (H5T_NATIVE_FLOAT);
+    {
+      type_id = H5Tcopy (H5T_NATIVE_FLOAT);
+      typesize = sizeof(float);
+    }
   else if (strcmp (datatype,"uint64") == 0)
-    type_id =  H5Tcopy (H5T_STD_U64LE);
+    {
+      type_id = H5Tcopy (H5T_STD_U64LE);
+      typesize = 64/8;
+    }
   else if (strcmp (datatype,"uint32") == 0)
-    type_id =  H5Tcopy (H5T_STD_U32LE);
+    {
+      type_id = H5Tcopy (H5T_STD_U32LE);
+      typesize = 32/8;
+    }
   else if (strcmp (datatype,"uint16") == 0)
-    type_id =  H5Tcopy (H5T_STD_U16LE);
+    {
+      type_id = H5Tcopy (H5T_STD_U16LE);
+      typesize = 16/8;
+    }
   else if (strcmp (datatype,"uint8") == 0)
-    type_id =  H5Tcopy (H5T_STD_U8LE);
+    {
+      type_id = H5Tcopy (H5T_STD_U8LE);
+      typesize = 8/8;
+    }
   else if (strcmp (datatype,"int64") == 0)
-    type_id =  H5Tcopy (H5T_STD_I64LE);
+    {
+      type_id = H5Tcopy (H5T_STD_I64LE);
+      typesize = 64/8;
+    }
   else if (strcmp (datatype,"int32") == 0)
-    type_id =  H5Tcopy (H5T_STD_I32LE);
+    {
+      type_id = H5Tcopy (H5T_STD_I32LE);
+      typesize = 32/8;
+    }
   else if (strcmp (datatype,"int16") == 0)
-    type_id =  H5Tcopy (H5T_STD_I16LE);
+    {
+      type_id = H5Tcopy (H5T_STD_I16LE);
+      typesize = 16/8;
+    }
   else if (strcmp (datatype,"int8") == 0)
-    type_id =  H5Tcopy (H5T_STD_I8LE);
+    {
+      type_id = H5Tcopy (H5T_STD_I8LE);
+      typesize = 8/8;
+    }
   else
     {
       error ("invalid datatype %s for dataset %s",datatype,location);
@@ -1431,6 +1477,9 @@ H5File::create_dset (const char *location, const Matrix& size,
   if (! chunksize.is_empty ())
     {
       // a dataset with an unlimited dimension must be chunked.
+      if (chunksize(0) == 0)
+	chunksize = get_auto_chunksize(size, typesize);
+      
       hsize_t *dims_chunk = alloc_hsize (chunksize, ALLOC_HSIZE_DEFAULT, true);
       if (H5Pset_layout (crp_list, H5D_CHUNKED) < 0)
         {
@@ -1455,5 +1504,59 @@ H5File::create_dset (const char *location, const Matrix& size,
   H5Pclose (crp_list);
 
 }
+
+Matrix
+H5File::get_auto_chunksize(const Matrix& dset_shape, int typesize)
+{
+  // This function originally stems from the h5py project.
+  
+  // Guess an appropriate chunk layout for a dataset, given its shape and
+  // the size of each element in bytes. Will allocate chunks only as large
+  // as MAX_SIZE. Chunks are generally close to some power-of-2 fraction of
+  // each axis, slightly favoring bigger values for the last index.
+  const int CHUNK_BASE = 16*1024; // Multiplier by which chunks are adjusted
+  const int CHUNK_MIN = 8*1024;  //Soft lower limit (8k)
+  const int CHUNK_MAX = 1024*1024; // Hard upper limit (1M)
+
+  Matrix chunksize = dset_shape;
+  int ndims = chunksize.length ();
+  for (int i = 0; i < ndims; i++)
+    {
+      //For unlimited dimensions we have to guess 1024
+      if(chunksize(i) == octave_Inf || chunksize(i) == 0)
+	chunksize(i) = 1024;
+    }
+  // Determine the optimal chunk size in bytes using a PyTables expression.
+  // This is kept as a float.
+  int dset_size = chunksize.prod ()(0)*typesize;
+  int target_size = CHUNK_BASE * pow(2,log10(dset_size/(1024.0 * 1024)));
+  if (target_size > CHUNK_MAX)
+    target_size = CHUNK_MAX;
+  else if (target_size < CHUNK_MIN)
+    target_size = CHUNK_MIN;
+
+  int idx = 0;
+  while(true)
+    {
+
+      // Repeatedly loop over the axes, dividing them by 2. Stop when:
+      // 1a. We're smaller than the target chunk size, OR
+      // 1b. We're within 50% of the target chunk size, AND
+      // 2. The chunk is smaller than the maximum chunk size
+      int chunk_bytes = chunksize.prod ()(0)*typesize;
+      if ((chunk_bytes < target_size ||
+	   abs(chunk_bytes-target_size)/target_size < 0.5) &&
+	  chunk_bytes < CHUNK_MAX)
+	break;
+      
+      if (chunksize.prod ()(0) == 1)
+	break; // Element size larger than CHUNK_MAX
+      
+      chunksize(idx%ndims) = ceil(chunksize(idx%ndims) / 2.0);
+      idx++;
+    }
+  return chunksize;
+}
+
 
 #endif

@@ -60,7 +60,7 @@ class H5File
   void write_att (const char *location, const char *attname,
                   const octave_value& attvalue);
   void create_dset (const char *location, const Matrix& size,
-                    const char *datatype, const Matrix& chunksize);
+                    const char *datatype, Matrix& chunksize);
  private:
   const static int ALLOC_HSIZE_INFZERO_TO_UNLIMITED = 1;
   const static int ALLOC_HSIZE_INF_TO_ZERO = 2;
@@ -86,6 +86,7 @@ class H5File
   
   int open_dset (const char *dsetname);
   octave_value read_dset ();
+  Matrix get_auto_chunksize (const Matrix& size, int typesize);
 
   template <typename T> hsize_t* alloc_hsize (const T& dim, const int mode, const bool reverse);
 
