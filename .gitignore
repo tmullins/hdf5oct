@@ -1,0 +1,7 @@
+test/test*.h5
+test/write_test
+package/inst
+*.tar.gz
+*.doc.h
+*.o
+*.oct

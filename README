@@ -1,32 +1,84 @@
-
-  ===  hdf5oct  ===
+hdf5oct - a HDF5 wrapper for GNU Octave
+=======================================
 
 Copyright 2012 Tom Mullins
-
+Copyright 2015 Tom Mullins, Anton Starikov, Thorsten Liebig, Stefan Großhauser
 
 This is a library for GNU Octave for reading hdf5 files. At the moment it
-provides only one function, modeled after Matlab's h5read, which can read
-subsets of a dataset.  Octave's load function will attempt to read an entire
-dataset, which for very large datasets is undesired. h5util's h5read function
-does slightly better, reading only 2d slices of 3d datasets, but that's still
-fairly limiting. This exposes libhdf5's H5Sselect_hyperslab in a way which
-tries to be compatible with Matlab.
+provides the following functions:
 
-To install, just use "make" or "make all" or "make h5read.oct". Then move
-h5read.oct somewhere where Octave will find it. You can try running h5test.m if
-you want to see if it works. 
+ h5read: modeled after Matlab's h5read, which can read subsets of a
+ 	 dataset.  Octave's load function will attempt to read an
+ 	 entire dataset, which for very large datasets is
+ 	 undesired. h5util's h5read function does slightly better,
+ 	 reading only 2d slices of 3d datasets, but that's still
+ 	 fairly limiting. This exposes libhdf5's H5Sselect_hyperslab
+ 	 in a way which tries to be compatible with Matlab.
 
-If anyone wants to take this code and put it in the Octave Forge, you're
-welcome to. Especially if you want to add h5write, h5create, etc :). I may
-write more of those in the future, but if someone else does it first I'd be
-okay with that.
+ h5readatt: Most of this function was written by thliebig. It allows
+ 	    to read scalar HDF5 attributes of some types.
 
-TODO:
--write h5write, h5create, h5writeatt, h5readattr, h5disp, and h5info. This may
- take some fairly major changes to H5File.
--maybe use hdf5's c++ interface instead of the c interace.
--write more comprehensive tests instead of a few random choices. Also test for
- error conditions.
--test with a chunked dataset with an unlimited dimension (should just work,
- though I haven't tried it)
--modify to follow "Octave conventions" if I ever find info on what those are.
+ h5write: Write a matrix to a dataset. This
+          will either overwrite an already existing dataset, or allow to
+	  append hyperslabs to existing datasets.
+
+ h5writeatt: Attach an attribute to an object.
+
+ h5create: Create a dataset and specify its extent dimensions,
+           datatype and chunk size.
+
+Note that only few of the HDF5 datatypes are supported by each of the
+functions hdf5oct at the moment, typically one or several of double,
+integer and string.
+
+# INSTALLATION #########################
+
+To install, just use
+
+    make
+    
+This will produce a package file named "hdf5oct-*.tar.gz" .  Then
+you may either install the package with
+
+    make install
+
+or you may start GNU Octave and install the package manually (using
+the correct file name) with the command
+
+    pkg install hdf5oct-0.2.0.tar.gz
+
+This will put the *.oct files somewhere where Octave will find them.
+You can try running
+
+    make test
+
+
+# DEINSTALLATION #########################
+
+To uninstall the package you may want to use
+
+   make uninstall
+
+# TODO #################################
+
+- write h5info, h5disp
+
+- support compression flags
+
+- read string typed datasets
+
+- read string-array typed attributes
+
+- maybe use hdf5's c++ interface instead of the c interace.
+
+- write more comprehensive tests instead of a few random choices. Also
+  test for error conditions.
+  
+- make sure Fortran/C ordering is handled in a matlab compatible manner
+
+For integration into octave core:
+
+- make it really clean
+
+- guess chunksize like
+  https://github.com/h5py/h5py/blob/master/h5py/_hl/filters.py#L257
