@@ -522,6 +522,68 @@ setting is not @sc{matlab} compatible.\n\
 #endif
 }
 
+
+DEFUN_DLD (h5delete, args, nargout,
+           "-*- texinfo -*-\n\
+@deftypefn {Loadable Function} h5delete (@var{filename}, @var{objname})\n\
+@deftypefnx {Loadable Function} h5delete (@var{filename}, @var{objname}, @var{attname})\n\
+\n\
+In the first form, delete a dataset or group with name @var{objname}\n\
+in the HDF5 file specified by @var{filename}.\n\
+\n\
+In the second form, delete an attribute with name @var{attname} associated\n\
+to a dataset or group with name @var{objname}\n\
+in the HDF5 file specified by @var{filename}.\n\
+\n\
+Note that this function is not @sc{matlab} compliant.\n\
+\n\
+@seealso{h5create}\n\
+@end deftypefn")
+{
+#if ! (defined (HAVE_HDF5) && defined (HAVE_HDF5_18))
+  gripe_disabled_feature("h5delete", "HDF5 IO");
+  return octave_value_list ();
+#else
+  int nargin = args.length ();
+
+  if (! (nargin ==  2 || nargin == 3) || nargout != 0)
+    {
+      print_usage ();
+      return octave_value_list ();
+    }
+  if (! (args(0).is_string () && args(1).is_string ()))
+    {
+      print_usage ();
+      return octave_value_list ();
+    }
+  if (nargin == 3 && ! args(2).is_string ())
+    {
+      print_usage ();
+      return octave_value_list ();
+    }
+  
+  string filename = args(0).string_value ();
+  string location = args(1).string_value ();
+  if (error_state)
+    return octave_value_list ();
+
+  //open the hdf5 file
+  H5File file (filename.c_str (), true);
+  if (error_state)
+    return octave_value_list ();
+  if (nargin == 2)
+    file.delete_link (location.c_str ());
+  else if (nargin == 3)
+    {
+      string attname = args(2).string_value ();
+      if(!error_state)
+	file.delete_att (location.c_str (), attname.c_str ());
+    }
+  
+  return octave_value_list ();
+#endif
+}
+
 #if defined (HAVE_HDF5) && defined (HAVE_HDF5_18)
 
 H5File::H5File (const char *filename, const bool create_if_nonexisting)
@@ -1504,6 +1566,30 @@ H5File::create_dset (const char *location, const Matrix& size,
   H5Pclose (crp_list);
 
 }
+
+void
+H5File::delete_link (const char *location)
+{
+  herr_t status = H5Ldelete (file, location, H5P_DEFAULT);
+  if (status < 0)
+    {
+      error ("Error when deleting object %s", location);
+      return;
+    }
+}
+
+
+void
+H5File::delete_att (const char *location, const char *att_name)
+{
+  herr_t status = H5Adelete_by_name (file,location,att_name,H5P_DEFAULT);
+  if (status < 0)
+    {
+      error ("Error when deleting attribute %s of object %s", att_name, location);
+      return;
+    }
+}
+
 
 Matrix
 H5File::get_auto_chunksize(const Matrix& dset_shape, int typesize)

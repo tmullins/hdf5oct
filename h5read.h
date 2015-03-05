@@ -61,6 +61,9 @@ class H5File
                   const octave_value& attvalue);
   void create_dset (const char *location, const Matrix& size,
                     const char *datatype, Matrix& chunksize);
+  void delete_link (const char *location);
+  void delete_att (const char *location, const char *att_name);
+
  private:
   const static int ALLOC_HSIZE_INFZERO_TO_UNLIMITED = 1;
   const static int ALLOC_HSIZE_INF_TO_ZERO = 2;
