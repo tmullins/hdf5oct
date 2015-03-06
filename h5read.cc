@@ -1,7 +1,7 @@
 /*
  *
  *    Copyright (C) 2012 Tom Mullins
- *    Copyright (C) 2015 Tom Mullins, Thorsten Liebig, Stefan Großhauser
+ *    Copyright (C) 2015 Tom Mullins, Thorsten Liebig, Anton Starikov, Stefan Großhauser
  *    Copyright (C) 2008-2013 Andrew Collette
  *
  *    This file is part of hdf5oct.

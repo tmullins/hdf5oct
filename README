@@ -3,6 +3,7 @@ hdf5oct - a HDF5 wrapper for GNU Octave
 
 Copyright 2012 Tom Mullins
 Copyright 2015 Tom Mullins, Anton Starikov, Thorsten Liebig, Stefan Großhauser
+Copyright 2008-2013 Andrew Collette
 
 This is a library for GNU Octave for reading hdf5 files. At the moment it
 provides the following functions:
@@ -26,6 +27,8 @@ provides the following functions:
 
  h5create: Create a dataset and specify its extent dimensions,
            datatype and chunk size.
+
+ h5delete: Delete a group, dataset, or attribute.
 
 Note that only few of the HDF5 datatypes are supported by each of the
 functions hdf5oct at the moment, typically one or several of double,
@@ -63,22 +66,11 @@ To uninstall the package you may want to use
 
 - write h5info, h5disp
 
-- support compression flags
+- support compression flags for h5create
 
 - read string typed datasets
 
 - read string-array typed attributes
 
-- maybe use hdf5's c++ interface instead of the c interace.
-
 - write more comprehensive tests instead of a few random choices. Also
   test for error conditions.
-  
-- make sure Fortran/C ordering is handled in a matlab compatible manner
-
-For integration into octave core:
-
-- make it really clean
-
-- guess chunksize like
-  https://github.com/h5py/h5py/blob/master/h5py/_hl/filters.py#L257
