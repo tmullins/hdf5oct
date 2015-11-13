@@ -1,8 +1,8 @@
 /*
  *
  *    Copyright (C) 2012 Tom Mullins
- *    Copyright (C) 2015 Tom Mullins, Thorsten Liebig, Stefan Großhauser
- *
+ *    Copyright (C) 2015 Tom Mullins, Thorsten Liebig, Anton Starikov, Stefan Großhauser
+ *    Copyright (C) 2008-2013 Andrew Collette
  *
  *    This file is part of hdf5oct.
  *
@@ -53,6 +53,8 @@ using namespace std;
 #include <hdf5.h>
 #include "h5read.h"
 
+#include "ls-hdf5.h"
+
 bool
 any_int_leq_zero (const Matrix& mat)
 {
@@ -68,7 +70,7 @@ any_int_leq_zero (const Matrix& mat)
 // else, 0s will produce an error message (used for others)
 int
 check_vec (const octave_value& val, Matrix& mat/*out*/,
-              const char *name, bool allow_zeros)
+           const char *name, bool allow_zeros)
 {
   mat = val.matrix_value ();
   if (error_state)
@@ -106,7 +108,7 @@ check_vec (const octave_value& val, Matrix& mat/*out*/,
 #endif
 
 DEFUN_DLD (h5read, args, nargout,
-          "-*- texinfo -*-\n\
+           "-*- texinfo -*-\n\
 @deftypefn {Loadable Function} {@var{data} =} h5read (@var{filename}, @var{dsetname})\n\
 @deftypefnx {Loadable Function} {@var{data} =} h5read (@var{filename}, @var{dsetname}, @var{start}, @var{count})\n\
 @deftypefnx {Loadable Function} {@var{data} =} h5read (@var{filename}, @var{dsetname}, @var{start}, @var{count}, @var{stride})\n\
@@ -201,7 +203,7 @@ the appropriate size for the given HDF5 type.\n\
         return octave_value_list ();
 
       return file.read_dset_hyperslab (dsetname.c_str (),
-                                      start, count, stride, block, nargin-2);
+                                       start, count, stride, block, nargin-2);
     }
 #endif
 }
@@ -254,7 +256,7 @@ is to read.\n\
 
 
 DEFUN_DLD (h5write, args, nargout,
-          "-*- texinfo -*-\n\
+           "-*- texinfo -*-\n\
 @deftypefn {Loadable Function} h5write (@var{filename}, @var{dsetname}, @var{data})\n\
 @deftypefnx {Loadable Function} h5write (@var{filename}, @var{dsetname}, @var{data}, @var{start}, @var{count})\n\
 @deftypefnx {Loadable Function} h5write (@var{filename}, @var{dsetname}, @var{data}, @var{start}, @var{count}, @var{stride})\n\
@@ -320,7 +322,7 @@ the appropriate size for the given Octave type.\n\
       if (error_state)
         return octave_value_list ();
       file.write_dset (location.c_str (),
-                      args(2));
+                       args(2));
     }
   else  
     {
@@ -351,8 +353,8 @@ the appropriate size for the given Octave type.\n\
         return octave_value_list ();
 
       file.write_dset_hyperslab (location.c_str (),
-                                args(2),
-                                start, count, stride, block, nargin-3);
+                                 args(2),
+                                 start, count, stride, block, nargin-3);
     }
 
   return octave_value_list ();
@@ -361,7 +363,7 @@ the appropriate size for the given Octave type.\n\
 
 
 DEFUN_DLD (h5writeatt, args, nargout,
-          "-*- texinfo -*-\n\
+           "-*- texinfo -*-\n\
 @deftypefn {Loadable Function} h5writeatt (@var{filename}, @var{objectname}, @var{attname}, @var{attvalue})\n\
 \n\
 Write an attribute with name @var{attname} and value @var{attvalue} to\n\
@@ -400,7 +402,7 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
     return octave_value_list ();
 
   file.write_att (location.c_str (), attname.c_str (),
-                 args(3));
+                  args(3));
 
   return octave_value_list ();
 #endif
@@ -408,7 +410,7 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
 
 
 DEFUN_DLD (h5create, args, nargout,
-          "-*- texinfo -*-\n\
+           "-*- texinfo -*-\n\
 @deftypefn {Loadable Function} h5create (@var{filename}, @var{dsetname}, @var{size}, @var{key}, @var{val},...)\n\
 \n\
 Create a dataset with name @var{dsetname} and size @var{size} \n\
@@ -418,6 +420,8 @@ The vector @var{size} may contain one or several Inf (or \n\
 equivalently: zero) values.\n\
 This will lead to unlimited maximum extent of the dataset in the\n\
 respective dimensions and 0 initial extent.\n\
+Note that any dataset with at least one unlimited dimension must be chunked and\n\
+it is generally recommended for large datasets.\n\
 \n\
 The list of @var{key}, @var{val} arguments allows to specify\n\
 certain properties of the dataset. Allowed settings are:\n\
@@ -427,9 +431,11 @@ certain properties of the dataset. Allowed settings are:\n\
 one of the strings @samp{double} @samp{single} @samp{uint64} @samp{uint32} @samp{uint16} @samp{uint8} @samp{int64} @samp{int32} @samp{int16} @samp{int8} \n\
 \n\
 @item @option{ChunkSize}\n\
-a vector specifying the chunk size. Note that any\n\
-dataset with an unlimited dimension must be chunked.\n\
-The default value is an empty vector [], which means no chunking.\n\
+The value may be either a vector specifying the chunk size,\n\
+or an empty vector [], which means no chunking (this is the default),\n\
+or the string @samp{auto} which makes the library choose automatically \n\
+an appropriate chunk size, as best as it can. Note that the @samp{auto}\n\
+setting is not @sc{matlab} compatible.\n\
 @end table\n\
 \n\
 @seealso{h5write}\n\
@@ -464,7 +470,7 @@ The default value is an empty vector [], which means no chunking.\n\
   
   Matrix size;
   if (! check_vec (args(2), size, "SIZE", true))
-      return octave_value_list ();
+    return octave_value_list ();
 
 
   // loop over the key-value pairs and see what is given
@@ -483,8 +489,19 @@ The default value is an empty vector [], which means no chunking.\n\
         }
       else if (args(i).string_value () == "ChunkSize")
         {
-          if (! check_vec (args(i+1), chunksize, "ChunkSize", false))
-              return octave_value_list ();
+	  if (args(i+1).is_string ())
+	    {
+	      if(args(i+1).string_value () != "auto")
+		{
+		  error ("ChunkSize argument must be either a vector, or the string 'auto'.");
+		  return octave_value_list ();
+		}
+	      chunksize = args(2).matrix_value ();
+	      chunksize(0) = 0;
+
+	    }
+          else if (! check_vec (args(i+1), chunksize, "ChunkSize", false))
+            return octave_value_list ();
         }
       else
         {
@@ -500,6 +517,68 @@ The default value is an empty vector [], which means no chunking.\n\
   if (error_state)
     return octave_value_list ();
   file.create_dset (location.c_str (), size, datatype.c_str (), chunksize);
+  
+  return octave_value_list ();
+#endif
+}
+
+
+DEFUN_DLD (h5delete, args, nargout,
+           "-*- texinfo -*-\n\
+@deftypefn {Loadable Function} h5delete (@var{filename}, @var{objname})\n\
+@deftypefnx {Loadable Function} h5delete (@var{filename}, @var{objname}, @var{attname})\n\
+\n\
+In the first form, delete a dataset or group with name @var{objname}\n\
+in the HDF5 file specified by @var{filename}.\n\
+\n\
+In the second form, delete an attribute with name @var{attname} associated\n\
+to a dataset or group with name @var{objname}\n\
+in the HDF5 file specified by @var{filename}.\n\
+\n\
+Note that this function is not @sc{matlab} compliant.\n\
+\n\
+@seealso{h5create}\n\
+@end deftypefn")
+{
+#if ! (defined (HAVE_HDF5) && defined (HAVE_HDF5_18))
+  gripe_disabled_feature("h5delete", "HDF5 IO");
+  return octave_value_list ();
+#else
+  int nargin = args.length ();
+
+  if (! (nargin ==  2 || nargin == 3) || nargout != 0)
+    {
+      print_usage ();
+      return octave_value_list ();
+    }
+  if (! (args(0).is_string () && args(1).is_string ()))
+    {
+      print_usage ();
+      return octave_value_list ();
+    }
+  if (nargin == 3 && ! args(2).is_string ())
+    {
+      print_usage ();
+      return octave_value_list ();
+    }
+  
+  string filename = args(0).string_value ();
+  string location = args(1).string_value ();
+  if (error_state)
+    return octave_value_list ();
+
+  //open the hdf5 file
+  H5File file (filename.c_str (), true);
+  if (error_state)
+    return octave_value_list ();
+  if (nargin == 2)
+    file.delete_link (location.c_str ());
+  else if (nargin == 3)
+    {
+      string attname = args(2).string_value ();
+      if(!error_state)
+	file.delete_att (location.c_str (), attname.c_str ());
+    }
   
   return octave_value_list ();
 #endif
@@ -578,18 +657,19 @@ H5File::~H5File ()
 // T will be Matrix or dim_vector
 template <typename T>
 hsize_t*
-H5File::alloc_hsize (const T& dim, const int inf_zero_treatment_mode)
+H5File::alloc_hsize (const T& dim, const int mode, const bool reverse)
 {
   int rank = dim.length ();
   hsize_t *hsize = (hsize_t*)malloc (rank * sizeof (hsize_t));
   for (int i = 0; i < rank; i++)
     {
-      if (inf_zero_treatment_mode == ALLOC_HSIZE_INFZERO_TO_UNLIMITED && (dim(i) == octave_Inf || dim(i) == 0))
-        hsize[i] = H5S_UNLIMITED;
-      else if (inf_zero_treatment_mode == ALLOC_HSIZE_INF_TO_ZERO && dim(i) == octave_Inf)
-        hsize[i] = 0;
+      int j = reverse ? rank-i-1 : i;
+      if (mode == ALLOC_HSIZE_INFZERO_TO_UNLIMITED && (dim(i) == octave_Inf || dim(i) == 0))
+        hsize[j] = H5S_UNLIMITED;
+      else if (mode == ALLOC_HSIZE_INF_TO_ZERO && dim(i) == octave_Inf)
+        hsize[j] = 0;
       else
-        hsize[i] = dim(i);
+        hsize[j] = dim(i);
     }
   return hsize;
 }
@@ -608,7 +688,7 @@ H5File::open_dset (const char *dsetname)
   dspace_id = H5Dget_space (dset_id);
   if (dspace_id < 0)
     {
-      error ("Error opening dataspace %s", dsetname);
+      error ("Error opening dataspace of dataset %s", dsetname);
       return -1;
     }
 
@@ -646,7 +726,8 @@ H5File::read_dset_complete (const char *dsetname)
   // we need at least 2 filled
   mat_dims(0) = mat_dims(1) = 1;
   for (int i = 0; i < rank; i++)
-    mat_dims(i) = h5_dims[i];
+    //note that this is reversing the order
+    mat_dims(i) = h5_dims[rank-i-1];
 
   if (H5Sselect_all (dspace_id) < 0)
     {
@@ -660,15 +741,15 @@ H5File::read_dset_complete (const char *dsetname)
 
 octave_value
 H5File::read_dset_hyperslab (const char *dsetname,
-                            const Matrix& start, const Matrix& count,
-                            const Matrix& stride, const Matrix& block,
-                            int nargin)
+                             const Matrix& start, const Matrix& count,
+                             const Matrix& stride, const Matrix& block,
+                             int nargin)
 {
   if (open_dset (dsetname) < 0)
     return octave_value_list ();
 
   if (rank == 0 && ! (start.is_empty () && count.is_empty ()
-                     && stride.is_empty () && block.is_empty ()))
+                      && stride.is_empty () && block.is_empty ()))
     {
       error ("Cannot specify hyperslab for scalar datasets (rank 0)");
       return octave_value_list ();
@@ -713,34 +794,34 @@ H5File::read_dset_hyperslab (const char *dsetname,
       if (_stride(i) < _block(i))
         {
           error ("In dimension %d, requested stride %d smaller than block size %d",
-                i+1, (int)_stride(i), (int)_block(i));
+                 i+1, (int)_stride(i), (int)_block(i));
           return octave_value_list ();
         }
       if (_count(i) == 0)
         {
           // a value of 0 (or Inf) means that as many blocks as possible
           // shall be read in this dimension
-          _count(i) = (h5_dims[i] - start(i) - _block(i)) / _stride(i) + 1;
+          _count(i) = (h5_dims[rank-i-1] - start(i) - _block(i)) / _stride(i) + 1;
         }
       mat_dims(i) = _count(i)*_block(i);
       int end = start(i) + _stride(i)*(_count(i)-1) + _block(i); // exclusive
-      if (h5_dims[i] < end)
+      if (h5_dims[rank-i-1] < end)
         {
           error ("In dimension %d, dataset only has %d elements, but at least %d"
-                " are required for requested hyperslab", i+1, (int)h5_dims[i],
-                end);
+                 " are required for requested hyperslab", i+1, (int)h5_dims[rank-i-1],
+                 end);
           return octave_value_list ();
         }
     }
 
-  hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hcount = alloc_hsize (_count, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT);
+  hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hcount = alloc_hsize (_count, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT, true);
   // TODO check these (and hmem) for NULLs
 
   herr_t sel_result = H5Sselect_hyperslab (dspace_id, H5S_SELECT_SET, hstart,
-                                          hstride, hcount, hblock);
+                                           hstride, hcount, hblock);
 
   free (hstart);
   free (hstride);
@@ -761,47 +842,48 @@ H5File::read_dset ()
   type_id = H5Dget_type (dset_id);
   hid_t complex_type_id = hdf5_make_complex_type (H5T_NATIVE_DOUBLE);
 
-  Matrix perm_vec(1, rank);
-  if (rank >= 2)
-    {
-      // reverse the elements in mat_dims
-      dim_vector new_mat_dims;
-      new_mat_dims.resize (rank);
-      for (int i = 0; i < rank; i++)
-        {
-          int j = rank-i-1;
-          new_mat_dims(i) = mat_dims(j);
-      
-          perm_vec(i) = j;
-        }
-      mat_dims = new_mat_dims;
-    }
-
-  hsize_t *hmem = alloc_hsize (mat_dims, ALLOC_HSIZE_DEFAULT);
-  hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
-  free (hmem);
+  // hsize_t *hmem = alloc_hsize (mat_dims, ALLOC_HSIZE_DEFAULT, false);
+  // hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
+  // free (hmem);
 
   octave_value retval;
-  herr_t read_result;
-  if (H5Tequal (type_id, complex_type_id) > 0)
+  if (H5Tget_class (type_id) == H5T_COMPOUND &&
+      H5Tget_class (complex_type_id) == H5T_COMPOUND &&
+      hdf5_types_compatible (type_id, complex_type_id) > 0)
     {
       ComplexNDArray ret (mat_dims);
-#define READ_AND_PERMUTE(type) read_result = H5Dread (dset_id,           \
-                                               type,                    \
-                                               memspace_id, dspace_id,  \
-                                               H5P_DEFAULT, ret.fortran_vec ()); \
+      // macro begin
+#define HDF5_READ_DATA(type)                                            \
+      if (H5Sselect_valid (dspace_id) <= 0)                             \
+        {                                                               \
+          error ("selected dataspace is not valid");                    \
+          return octave_value_list ();                                  \
+        }                                                               \
+                                                                        \
+      int mdc_nelem = -1;                                               \
+      size_t rdcc_nelem = -1;                                           \
+      size_t rdcc_nbytes = -1;                                          \
+      double rdcc_w0 = -1;                                              \
+      if (H5Pget_cache (H5Fget_access_plist (file), &mdc_nelem,         \
+                        &rdcc_nelem, &rdcc_nbytes, &rdcc_w0 ) < 0)      \
+        {                                                               \
+          error ("could not determine raw data chunk cache parameters."); \
+          return octave_value_list ();                                  \
+        }                                                               \
+      /*cout << "cache params:" << rdcc_nelem << "," << rdcc_nbytes << endl;*/ \
+      herr_t read_result = H5Dread (dset_id,                            \
+                                    type,                               \
+                                    H5S_ALL, dspace_id,                 \
+                                    H5P_DEFAULT, ret.fortran_vec ());   \
       if (read_result < 0)                                              \
         {                                                               \
-          error ("error when reading dataset");                          \
-          return octave_value_list ();                                   \
+          error ("error when reading dataset");                         \
+          return octave_value_list ();                                  \
         }                                                               \
-      if (rank >= 2)                                                     \
-        ret = ret.permute (perm_vec, false);                             \
-      if (ret.is_vector ())                                               \
-        ret = ret.transpose ();                                          \
       retval = octave_value (ret)
+      // macro end
       
-      READ_AND_PERMUTE (type_id);
+      HDF5_READ_DATA (type_id);
     }
   else if (H5Tget_class (type_id) == H5T_INTEGER)
     {
@@ -811,13 +893,13 @@ H5File::read_dset ()
           if (H5Tget_sign (type_id) == H5T_SGN_NONE)
             {
               uint64NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           else
             {
               int64NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           break;
@@ -825,13 +907,13 @@ H5File::read_dset ()
           if (H5Tget_sign (type_id) == H5T_SGN_NONE)
             {
               uint32NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           else
             {
               int32NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           break;
@@ -839,13 +921,13 @@ H5File::read_dset ()
           if (H5Tget_sign (type_id) == H5T_SGN_NONE)
             {
               uint16NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           else
             {
               int16NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           break;
@@ -853,13 +935,13 @@ H5File::read_dset ()
           if (H5Tget_sign (type_id) == H5T_SGN_NONE)
             {
               uint8NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           else
             {
               int8NDArray ret (mat_dims);
-              READ_AND_PERMUTE (type_id);
+              HDF5_READ_DATA (type_id);
               break;
             }
           break;
@@ -867,14 +949,14 @@ H5File::read_dset ()
           {
             error ("unknown integer size %d", H5Tget_size (type_id));
             NDArray ret (mat_dims);
-            READ_AND_PERMUTE (type_id);
+            HDF5_READ_DATA (type_id);
           }
         }
     }
   else
     {
       NDArray ret (mat_dims);
-      READ_AND_PERMUTE (H5T_NATIVE_DOUBLE);
+      HDF5_READ_DATA (H5T_NATIVE_DOUBLE);
     }
   H5Tclose (complex_type_id);
   
@@ -883,26 +965,11 @@ H5File::read_dset ()
 
 void
 H5File::write_dset (const char *dsetname,
-                   const octave_value ov_data)
+                    const octave_value ov_data)
 {
   int rank = ov_data.dims ().length ();
-  // create a dims vector where the elements are reversed with respect
-  // to the octave matrix.
-  dim_vector new_mat_dims;
-  Matrix perm_vec(1, rank);
-  new_mat_dims.resize (rank);
-  for (int i = 0; i < rank; i++)
-    {
-      int j = rank-i-1;
-      if (rank >= 2)
-        new_mat_dims(i) = ov_data.dims ()(j);
-      else
-        // this is not yet correct, a onedimensional matrix is transposed
-        new_mat_dims(i) = ov_data.dims ()(i);
-      
-      perm_vec(i) = j;
-    }
-  hsize_t *dims = alloc_hsize (new_mat_dims, ALLOC_HSIZE_DEFAULT);
+
+  hsize_t *dims = alloc_hsize (ov_data.dims(), ALLOC_HSIZE_DEFAULT, true);
   dspace_id = H5Screate_simple (rank, dims, NULL);
   free (dims);
 
@@ -936,26 +1003,26 @@ H5File::write_dset (const char *dsetname,
       //otherwise, create it.  Furthermore check if the datatype is
       //compliant with given octave data.
   
-#define OPEN_AND_WRITE if (H5Lexists (file,dsetname,H5P_DEFAULT))         \
+#define OPEN_AND_WRITE if (H5Lexists (file,dsetname,H5P_DEFAULT))       \
         {                                                               \
-          if (open_dset (dsetname) < 0)                                   \
+          if (open_dset (dsetname) < 0)                                 \
             {                                                           \
               error ("Could not open existing dataset in order to write to"); \
               return;                                                   \
             }                                                           \
         }                                                               \
       else                                                              \
-        dset_id = H5Dcreate (file, dsetname, type_id, dspace_id,         \
-                            H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);     \
+        dset_id = H5Dcreate (file, dsetname, type_id, dspace_id,        \
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);    \
                                                                         \
-      status = H5Dwrite (dset_id, type_id,                               \
-                        H5S_ALL, H5S_ALL, H5P_DEFAULT,                  \
-                        data.permute (perm_vec,true).fortran_vec ())
+      status = H5Dwrite (dset_id, type_id,                              \
+                         H5S_ALL, H5S_ALL, H5P_DEFAULT,                 \
+                         data.fortran_vec ())
   
       type_id = hdf5_make_complex_type (H5T_NATIVE_DOUBLE);
       ComplexNDArray data = ov_data.complex_array_value ();
       OPEN_AND_WRITE;
-  }
+    }
   else if (ov_data.is_integer_type ())
     {
       if (ov_data.is_uint64_type ())
@@ -1037,10 +1104,10 @@ H5File::write_dset (const char *dsetname,
 
 void
 H5File::write_dset_hyperslab (const char *dsetname,
-                             const octave_value ov_data,
-                             const Matrix& start, const Matrix& count,
-                             const Matrix& stride, const Matrix& block,
-                             int nargin)
+                              const octave_value ov_data,
+                              const Matrix& start, const Matrix& count,
+                              const Matrix& stride, const Matrix& block,
+                              int nargin)
 {
   NDArray data = ov_data.array_value ();
 
@@ -1049,7 +1116,7 @@ H5File::write_dset_hyperslab (const char *dsetname,
 
   // check if the given hyperslab settings are reasonable
   if (rank == 0 && ! (start.is_empty () && count.is_empty ()
-                     && stride.is_empty () && block.is_empty ()))
+                      && stride.is_empty () && block.is_empty ()))
     {
       error ("Cannot specify hyperslab for scalar datasets (rank 0)");
       return;
@@ -1089,31 +1156,31 @@ H5File::write_dset_hyperslab (const char *dsetname,
       if (_stride(i) < _block(i))
         {
           error ("In dimension %d, requested stride %d smaller than block size %d",
-                i+1, (int)_stride(i), (int)_block(i));
+                 i+1, (int)_stride(i), (int)_block(i));
           return;
         }
 
       // A count value 0 is not allowed when writing data.
 
       int end = start(i) + _stride(i)*(count(i)-1) + _block(i); // exclusive
-      if (h5_maxdims[i] < end)
+      if (h5_maxdims[rank-i-1] < end)
         {
           error ("In dimension %d, the dataset %s may have at max. only %d elements,"
-                " but at least %d are required for requested hyperslab.",
-                i+1, dsetname, (int)h5_maxdims[i], end);
+                 " but at least %d are required for requested hyperslab.",
+                 i+1, dsetname, (int)h5_maxdims[rank-i-1], end);
           return;
         }
 
       // now, the array holding the current dimension of the dataset
       // is changed (if its necessary), so that the new extent can be
       // set later.
-      if (h5_dims[i] < end)
-        h5_dims[i] = end;
+      if (h5_dims[rank-i-1] < end)
+        h5_dims[rank-i-1] = end;
     }
-  hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hcount = alloc_hsize (count, ALLOC_HSIZE_DEFAULT);
-  hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT);
+  hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hcount = alloc_hsize (count, ALLOC_HSIZE_DEFAULT, true);
+  hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT, true);
   // TODO check these (and hmem) for NULLs
   
   // make the current size of the dataset bigger
@@ -1130,7 +1197,7 @@ H5File::write_dset_hyperslab (const char *dsetname,
       return;
     }
   herr_t sel_result = H5Sselect_hyperslab (dspace_id, H5S_SELECT_SET, hstart,
-                                          hstride, hcount, hblock);
+                                           hstride, hcount, hblock);
 
   free (hstart);
   free (hstride);
@@ -1143,7 +1210,7 @@ H5File::write_dset_hyperslab (const char *dsetname,
       return;
     }
   
-  hsize_t *hmem = alloc_hsize (data.dims (), ALLOC_HSIZE_DEFAULT);
+  hsize_t *hmem = alloc_hsize (data.dims (), ALLOC_HSIZE_DEFAULT, false);
   hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
   if (memspace_id < 0)
     {
@@ -1153,8 +1220,8 @@ H5File::write_dset_hyperslab (const char *dsetname,
   free (hmem);
   
   herr_t status = H5Dwrite (dset_id, H5T_NATIVE_DOUBLE,
-                           memspace_id, dspace_id, H5P_DEFAULT,
-                           data.fortran_vec ());
+                            memspace_id, dspace_id, H5P_DEFAULT,
+                            data.fortran_vec ());
   if (status < 0)
     {
       error ("error when writing the dataset %s", dsetname);
@@ -1173,6 +1240,12 @@ H5File::read_att (const char *objname, const char *attname)
   if (obj_id < 0)
     {
       error ("h5readatt: opening the given object failed");
+      return retval;
+    }
+
+  if ( !hdf5_check_attr(obj_id, attname))
+    {
+      error ("h5readatt: the object %s does not have an attribute %s", objname, attname);
       return retval;
     }
 
@@ -1282,7 +1355,7 @@ cannot handle size of type");
 
 void
 H5File::write_att (const char *location, const char *attname,
-                       const octave_value& attvalue)
+                   const octave_value& attvalue)
 {
   hsize_t *dims;
   if (attvalue.is_scalar_type () || attvalue.is_string ())
@@ -1291,7 +1364,7 @@ H5File::write_att (const char *location, const char *attname,
     {
       error ("matrix type attributes are not yet supported.");
       return;
-      // dims = alloc_hsize (attvalue.dims (), ALLOC_HSIZE_DEFAULT);
+      // dims = alloc_hsize (attvalue.dims (), ALLOC_HSIZE_DEFAULT, true);
       // dspace_id = H5Screate_simple (attvalue.dims ().length (), dims, NULL);
       // free (dims);
     }
@@ -1335,7 +1408,7 @@ H5File::write_att (const char *location, const char *attname,
   double attval_double;
   int attval_int;
 
-   if (attvalue.is_string ())
+  if (attvalue.is_string ())
     {
       type_id = H5Tcopy (H5T_C_S1);
       H5Tset_size (type_id, attvalue.string_value ().length ());
@@ -1352,7 +1425,7 @@ H5File::write_att (const char *location, const char *attname,
       attval_int = attvalue.int_value ();
       buf = (void *) &attval_int;
     }
-   else if (attvalue.is_real_type ())
+  else if (attvalue.is_real_type ())
     {
       type_id = H5Tcopy (H5T_NATIVE_DOUBLE);
       mem_type_id = H5Tcopy (H5T_NATIVE_DOUBLE);
@@ -1389,28 +1462,59 @@ You have to save real and imag part separately.");
 
 void
 H5File::create_dset (const char *location, const Matrix& size,
-                    const char *datatype, const Matrix& chunksize)
+                     const char *datatype, Matrix& chunksize)
 {
+  int typesize;
   if (strcmp (datatype,"double") == 0)
-    type_id =  H5Tcopy (H5T_NATIVE_DOUBLE);
+    {
+      type_id = H5Tcopy (H5T_NATIVE_DOUBLE);
+      typesize = sizeof(double);
+    }
   else if (strcmp (datatype,"single") == 0)
-    type_id =  H5Tcopy (H5T_NATIVE_FLOAT);
+    {
+      type_id = H5Tcopy (H5T_NATIVE_FLOAT);
+      typesize = sizeof(float);
+    }
   else if (strcmp (datatype,"uint64") == 0)
-    type_id =  H5Tcopy (H5T_STD_U64LE);
+    {
+      type_id = H5Tcopy (H5T_STD_U64LE);
+      typesize = 64/8;
+    }
   else if (strcmp (datatype,"uint32") == 0)
-    type_id =  H5Tcopy (H5T_STD_U32LE);
+    {
+      type_id = H5Tcopy (H5T_STD_U32LE);
+      typesize = 32/8;
+    }
   else if (strcmp (datatype,"uint16") == 0)
-    type_id =  H5Tcopy (H5T_STD_U16LE);
+    {
+      type_id = H5Tcopy (H5T_STD_U16LE);
+      typesize = 16/8;
+    }
   else if (strcmp (datatype,"uint8") == 0)
-    type_id =  H5Tcopy (H5T_STD_U8LE);
+    {
+      type_id = H5Tcopy (H5T_STD_U8LE);
+      typesize = 8/8;
+    }
   else if (strcmp (datatype,"int64") == 0)
-    type_id =  H5Tcopy (H5T_STD_I64LE);
+    {
+      type_id = H5Tcopy (H5T_STD_I64LE);
+      typesize = 64/8;
+    }
   else if (strcmp (datatype,"int32") == 0)
-    type_id =  H5Tcopy (H5T_STD_I32LE);
+    {
+      type_id = H5Tcopy (H5T_STD_I32LE);
+      typesize = 32/8;
+    }
   else if (strcmp (datatype,"int16") == 0)
-    type_id =  H5Tcopy (H5T_STD_I16LE);
+    {
+      type_id = H5Tcopy (H5T_STD_I16LE);
+      typesize = 16/8;
+    }
   else if (strcmp (datatype,"int8") == 0)
-    type_id =  H5Tcopy (H5T_STD_I8LE);
+    {
+      type_id = H5Tcopy (H5T_STD_I8LE);
+      typesize = 8/8;
+    }
   else
     {
       error ("invalid datatype %s for dataset %s",datatype,location);
@@ -1418,9 +1522,9 @@ H5File::create_dset (const char *location, const Matrix& size,
     }
 
   // the size array may contains Infs, which are casted to zeros for..
-  hsize_t *dims = alloc_hsize (size, ALLOC_HSIZE_INF_TO_ZERO);
+  hsize_t *dims = alloc_hsize (size, ALLOC_HSIZE_INF_TO_ZERO, true);
   // and produce unlimited maximum extent for..
-  hsize_t *maxdims = alloc_hsize (size, ALLOC_HSIZE_INFZERO_TO_UNLIMITED);
+  hsize_t *maxdims = alloc_hsize (size, ALLOC_HSIZE_INFZERO_TO_UNLIMITED, true);
   dspace_id = H5Screate_simple (size.nelem (), dims, maxdims);
   free (dims);
   free (maxdims);
@@ -1435,7 +1539,10 @@ H5File::create_dset (const char *location, const Matrix& size,
   if (! chunksize.is_empty ())
     {
       // a dataset with an unlimited dimension must be chunked.
-      hsize_t *dims_chunk = alloc_hsize (chunksize, ALLOC_HSIZE_DEFAULT);
+      if (chunksize(0) == 0)
+	chunksize = get_auto_chunksize(size, typesize);
+      
+      hsize_t *dims_chunk = alloc_hsize (chunksize, ALLOC_HSIZE_DEFAULT, true);
       if (H5Pset_layout (crp_list, H5D_CHUNKED) < 0)
         {
           error ("Could not set chunked layout of %s", location);
@@ -1450,7 +1557,7 @@ H5File::create_dset (const char *location, const Matrix& size,
     }
   
   dset_id = H5Dcreate (file, location, type_id, dspace_id,
-                      H5P_DEFAULT, crp_list, H5P_DEFAULT);
+                       H5P_DEFAULT, crp_list, H5P_DEFAULT);
   if (dset_id < 0)
     {
       error ("Could not create dataset %s", location);
@@ -1460,15 +1567,81 @@ H5File::create_dset (const char *location, const Matrix& size,
 
 }
 
-hid_t
-H5File::hdf5_make_complex_type (hid_t num_type)
+void
+H5File::delete_link (const char *location)
 {
-  hid_t type_id = H5Tcreate (H5T_COMPOUND, sizeof (double) * 2);
+  herr_t status = H5Ldelete (file, location, H5P_DEFAULT);
+  if (status < 0)
+    {
+      error ("Error when deleting object %s", location);
+      return;
+    }
+}
 
-  H5Tinsert (type_id, "real", 0 * sizeof (double), num_type);
-  H5Tinsert (type_id, "imag", 1 * sizeof (double), num_type);
 
-  return type_id;
+void
+H5File::delete_att (const char *location, const char *att_name)
+{
+  herr_t status = H5Adelete_by_name (file,location,att_name,H5P_DEFAULT);
+  if (status < 0)
+    {
+      error ("Error when deleting attribute %s of object %s", att_name, location);
+      return;
+    }
+}
+
+
+Matrix
+H5File::get_auto_chunksize(const Matrix& dset_shape, int typesize)
+{
+  // This function originally stems from the h5py project.
+  
+  // Guess an appropriate chunk layout for a dataset, given its shape and
+  // the size of each element in bytes. Will allocate chunks only as large
+  // as MAX_SIZE. Chunks are generally close to some power-of-2 fraction of
+  // each axis, slightly favoring bigger values for the last index.
+  const int CHUNK_BASE = 16*1024; // Multiplier by which chunks are adjusted
+  const int CHUNK_MIN = 8*1024;  //Soft lower limit (8k)
+  const int CHUNK_MAX = 1024*1024; // Hard upper limit (1M)
+
+  Matrix chunksize = dset_shape;
+  int ndims = chunksize.length ();
+  for (int i = 0; i < ndims; i++)
+    {
+      //For unlimited dimensions we have to guess 1024
+      if(chunksize(i) == octave_Inf || chunksize(i) == 0)
+	chunksize(i) = 1024;
+    }
+  // Determine the optimal chunk size in bytes using a PyTables expression.
+  // This is kept as a float.
+  int dset_size = chunksize.prod ()(0)*typesize;
+  int target_size = CHUNK_BASE * pow(2,log10(dset_size/(1024.0 * 1024)));
+  if (target_size > CHUNK_MAX)
+    target_size = CHUNK_MAX;
+  else if (target_size < CHUNK_MIN)
+    target_size = CHUNK_MIN;
+
+  int idx = 0;
+  while(true)
+    {
+
+      // Repeatedly loop over the axes, dividing them by 2. Stop when:
+      // 1a. We're smaller than the target chunk size, OR
+      // 1b. We're within 50% of the target chunk size, AND
+      // 2. The chunk is smaller than the maximum chunk size
+      int chunk_bytes = chunksize.prod ()(0)*typesize;
+      if ((chunk_bytes < target_size ||
+	   abs(chunk_bytes-target_size)/target_size < 0.5) &&
+	  chunk_bytes < CHUNK_MAX)
+	break;
+      
+      if (chunksize.prod ()(0) == 1)
+	break; // Element size larger than CHUNK_MAX
+      
+      chunksize(idx%ndims) = ceil(chunksize(idx%ndims) / 2.0);
+      idx++;
+    }
+  return chunksize;
 }
 
 

@@ -30,79 +30,45 @@ help h5readatt
 help h5writeatt
 help h5create
 
-% for debugging:
-%system (sprintf ("gnome-terminal --command 'gdb -p %d'", getpid ()), "async");
-
-disp("------------ generate testdata: ----------------")
-
-dims = [4, 8, 3, 2];
-
-global d;
-d = {(1:dims(1))'};
-for k = 2:4
-  i_dims = dims(1:k);
-  d{k} = zeros(i_dims);
-  for j = 1:k
-    perm = i_dims;
-    perm(j) = 1;
-    M = 10^(j-1) * (1:i_dims(j))';
-    M = permute(M, [2:j, 1, j+1:k]);
-    d{k} += repmat(M, perm);
-  end
-end
-
-function mat = hyperslab(mat, rank, start, count, stride, block)
-  start = [start, ones(1, 4-rank)];
-  count = [count, ones(1, 4-rank)];
-  stride = [stride, ones(1, 4-rank)];
-  block = [block, ones(1, 4-rank)];
-  idx = {};
-  for k = 1:4
-    idx{k} = [];
-    for b = 0:(block(k)-1)
-      idx{k} = [idx{k}, (start(k)+b) : stride(k) : (count(k)*stride(k)-1+start(k)+b)];
-    end
-    idx{k} = sort(idx{k});
-  end
-  mat = mat(idx{1}, idx{2}, idx{3}, idx{4});
-end
-
-function check_slice(filename, rank, start=[], count=[], stride=[], block=[])
-  global d;
-  dataset = strcat('t', num2str(rank));
-  if start
-    if block
-      data = h5read(filename, dataset, start, count, stride, block);
-    else
-      block = ones(1, rank);
-      if stride
-        data = h5read(filename, dataset, start, count, stride);
-      else
-        stride = ones(1, rank);
-        data = h5read(filename, dataset, start, count);
-      end
-    end
-    comp = hyperslab(d{rank}, rank, start, count, stride, block);
-  else
-    data = h5read(filename, dataset);
-    if (rank == 0)
-      comp = 0;
-    else
-      comp = d{rank};
-    end
-  end
-  res = data == comp;
-  while ~isscalar(res)
-    res = all(res);
-  end
-  if res
-    printf('Success\n');
-  else
-    printf('Failed\n');
-  end
-end
-
 disp("------------ test functionality: ----------------")
+
+function ret = insert_chunk_at(mat, chunk, start)
+  ret = mat;
+  idx={};
+  for i = 1:ndims(mat)
+    idx{end+1} = start(i):start(i)+size(chunk,i)-1;
+  end
+  ret(idx{:}) = chunk;
+end
+
+function read_write_chunk_at(filename, dsetname, chunk, start)
+  chunksize = size(chunk);
+  try
+    ref = h5read(filename, dsetname);
+  catch
+    ref = zeros(chunksize);
+  end
+  h5write(filename,dsetname,chunk,start, chunksize)
+  ref = insert_chunk_at(ref, chunk, start);
+
+  ref2 = h5read(filename, dsetname);
+  if(alll(ref == ref2))
+    disp("ok")
+  else
+    error("test failed")
+    disp("expected:")
+    disp(ref)
+    disp("actually read:")
+    disp(ref2)
+  end
+end
+
+function ret = alll(mat)
+  ret = mat;
+  for i = 1:ndims(mat)
+      ret = all(ret);
+  end
+end
 
 disp("Test h5create and h5write hyperslabs...")
 chunksize = [1 3 2];
@@ -112,55 +78,54 @@ k=0;
 %h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**k,chunksize), [ 1+chunksize(1)*k, 1, 1], chunksize)
 k = k+1;
 start = [ 1+chunksize(1)*k, 1, 1];
-h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**k,chunksize), start, chunksize)
-k = k+1
+datachunk = reshape((1:prod(chunksize))*10**k,chunksize);
+%h5write("test.h5","/created_dset1",datachunk,start, size(datachunk))
+read_write_chunk_at("test.h5","/created_dset1",datachunk,start)
+
+k = k+1;
 start = [ 1+chunksize(1)*k, 1, 1];
-h5write("test.h5","/created_dset1",reshape((1:prod(chunksize))*10**k,chunksize), start, chunksize)
+datachunk = reshape((1:prod(chunksize))*10**k,chunksize);
+read_write_chunk_at("test.h5","/created_dset1",datachunk,start)
+
 %%%%%%%%
 h5create("test.h5","/created_dset_single",[ 2 3 4],'Datatype','single')
 %%%%%%%%
 h5create("test.h5","/created_dset_inf1",[ Inf Inf 4],'Datatype','uint16', 'ChunkSize', [10 2 4])
 %%%%%%%%
 chunksize = [2 3 2];
-h5create("test.h5","created_dset_inf2",[ 2 3 Inf],'Datatype','uint32', 'ChunkSize', chunksize)
+h5create("test.h5","created_dset_inf2",[ 2 3 Inf],'Datatype','uint64', 'ChunkSize', chunksize)
+
 k=0;
-%h5write("test.h5","/created_dset_inf2",reshape((1:prod(chunksize))*10**k,chunksize), [ 1+chunksize(1)*k, 1, 1], chunksize)
 k = k+1;
 k = k+1;
-start = [ 1,1,1+chunksize(1)*i];
-h5write("test.h5","/created_dset_inf2",cast(reshape((1:prod(chunksize))*10**k,chunksize),'double'), start, chunksize)
+start = [ 1,1,1+chunksize(1)*k];
+datachunk = cast(reshape((1:prod(chunksize))*10**k,chunksize),'uint32');
+read_write_chunk_at("test.h5","created_dset_inf2",datachunk,start)
+
 k = k+1;
-start = [ 1,1,1+chunksize(1)*i];
-h5write("test.h5","/created_dset_inf2",cast(reshape((1:prod(chunksize))*10**k,chunksize),'uint32'), start, chunksize)
+start = [ 1,1,1+chunksize(1)*k];
+datachunk = cast(reshape((1:prod(chunksize))*10**k,chunksize),'uint32');
+read_write_chunk_at("test.h5","created_dset_inf2",datachunk,start)
 
 %%%%%%%%
 h5create("test.h5","created_dset_inf23",[ 2 3 4],'Datatype','int8', 'ChunkSize', [2 3 2])
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-disp("Test h5read hyperslabs...")
-check_slice("test.h5", 0);
-check_slice("test.h5", 1);
-check_slice("test.h5", 2);
-check_slice("test.h5", 3);
-check_slice("test.h5", 4);
-check_slice("test.h5", 1, [2], [2], [2], [1]);
-check_slice("test.h5", 2, [1, 2], [2, 1]);
-check_slice("test.h5", 3, [1, 2, 1], [2, 1, 2], [2, 1, 1]);
-check_slice("test.h5", 3, [2, 1, 1], [2, 2, 2], [2, 3, 1], [1, 2, 1]);
-check_slice("test.h5", 4, [2, 1, 1, 2], [2, 2, 2, 1], [2, 3, 1, 3], [1, 2, 1, 1]);
-
-disp("Test h5write hyperslabs...")
-
-
 disp("Test h5write and h5read...")
 
 function check_dset(location, data)
 	 atttype = evalin("caller",["typeinfo(",data,")"]);
 	 attclass = evalin("caller",["class(",data,")"]);
-	 printf(["write ",num2str(ndims(evalin("caller",data))),"d ",attclass," ",atttype," dataset..."])
+	 printf(["write ",num2str(ndims(evalin("caller",data))),"d ",attclass," ",atttype," dataset ",location,"..."])
 	 h5write("test.h5", location,evalin("caller", data));
 	 printf("and read it..")
 	 readdata = h5read("test.h5", location);
+
+	 %disp("ref:")
+	 %disp(evalin("caller", data));
+	 %disp("data read from file:")
+	 %disp(readdata)
+	 
 	 if(all(readdata == evalin("caller", data)))
 	   disp("ok")
 	 elseif(isna(evalin("caller", data)) && isna(readdata))
@@ -179,17 +144,19 @@ end
 h5write("test.h5","/rangetest",1:10)
 h5write("test.h5","/rangetest2",transpose(1:0.2:2))
 
-s=5
+s=3
 range = cast(1:s**1,'int32');
 check_dset('/foo1_range', "range")
 matrix = reshape(cast(range,'int16'), length(range),1);
 check_dset('/foo1_int', "matrix")
-matrix = reshape(cast(1:s**2,'int8'), [s s]);
+matrix = reshape(cast(1:s*(s+1),'int8'), [s s+1]);
 check_dset('/foo2_int', "matrix")
-matrix =reshape(cast(1:s**3,'uint32'), [s s s]);
+matrix =reshape(cast(1:s*(s+1)*(s+2),'uint32'), [s s+1 s+2]);
 check_dset('/foo3_int', "matrix")
-matrix =reshape(cast(1:s**4,'uint32'), [s s s s]);
+matrix =reshape(cast(1:s*(s+1)*(s+2)*(s+3),'uint64'), [s s+1 s+2 s+3]);
 check_dset('/foo4_int', "matrix")
+matrix =reshape(cast(1:s*(s+1)*(s+2)*(s+3),'int64'), [s s+1 s+2 s+3]);
+check_dset('/foo5_int', "matrix")
 
 range =(1:s**1)*0.1;
 check_dset('/foo1_anotherrange', "range")
@@ -211,6 +178,10 @@ disp("Test h5write and h5read for complex data...")
 matrix = reshape((1:s**3)*0.1, [s s s]);
 matrix = matrix + i*matrix*0.01;
 check_dset('/foo_complex', "matrix")
+
+range = (1:s**3)*0.1;
+range = range + i*range*0.01;
+check_dset('/foo_complex_range', "range")
 
 disp("Test h5writeatt and h5readatt...")
 
@@ -289,4 +260,4 @@ catch
   disp(["error catched: ", lasterror.message])
 end
 
-
+h5create("test.h5","/created_autchunk",[ Inf Inf 4], 'ChunkSize', 'auto')

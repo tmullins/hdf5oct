@@ -60,7 +60,10 @@ class H5File
   void write_att (const char *location, const char *attname,
                   const octave_value& attvalue);
   void create_dset (const char *location, const Matrix& size,
-                    const char *datatype, const Matrix& chunksize);
+                    const char *datatype, Matrix& chunksize);
+  void delete_link (const char *location);
+  void delete_att (const char *location, const char *att_name);
+
  private:
   const static int ALLOC_HSIZE_INFZERO_TO_UNLIMITED = 1;
   const static int ALLOC_HSIZE_INF_TO_ZERO = 2;
@@ -81,16 +84,14 @@ class H5File
   hid_t type_id;
   hid_t mem_type_id;
 
-  
   //dimensions of the returned octave matrix
   dim_vector mat_dims;
   
   int open_dset (const char *dsetname);
   octave_value read_dset ();
+  Matrix get_auto_chunksize (const Matrix& size, int typesize);
 
-  hid_t hdf5_make_complex_type (hid_t num_type);
-
-  template <typename T> hsize_t* alloc_hsize (const T& dim, const int inf_zero_treatment_mode);
+  template <typename T> hsize_t* alloc_hsize (const T& dim, const int mode, const bool reverse);
 
 };
 
