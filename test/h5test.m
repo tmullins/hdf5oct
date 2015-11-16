@@ -260,4 +260,4 @@ catch
   disp(["error catched: ", lasterror.message])
 end
 
-
+h5create("test.h5","/created_autchunk",[ Inf Inf 4], 'ChunkSize', 'auto')
