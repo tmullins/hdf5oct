@@ -1,9 +1,12 @@
+=======================================
 hdf5oct - a HDF5 wrapper for GNU Octave
 =======================================
 
 Copyright 2012 Tom Mullins
 Copyright 2015 Tom Mullins, Anton Starikov, Thorsten Liebig, Stefan Großhauser
 Copyright 2008-2013 Andrew Collette
+
+.. contents::
 
 This is a library for GNU Octave for reading hdf5 files. At the moment it
 provides the following functions:
@@ -34,35 +37,43 @@ Note that only few of the HDF5 datatypes are supported by each of the
 functions hdf5oct at the moment, typically one or several of double,
 integer and string.
 
-# INSTALLATION #########################
+INSTALLATION
+============
 
-To install, just use
+To install, just use::
 
     make
     
 This will produce a package file named "hdf5oct-*.tar.gz" .  Then
-you may either install the package with
+you may either install the package with::
 
     make install
 
 or you may start GNU Octave and install the package manually (using
-the correct file name) with the command
+the correct file name) with the command::
 
     pkg install hdf5oct-0.2.0.tar.gz
 
 This will put the *.oct files somewhere where Octave will find them.
-You can try running
+You can try running::
 
     make test
 
 
-# DEINSTALLATION #########################
+DEINSTALLATION
+==============
 
-To uninstall the package you may want to use
+To uninstall the package you may want to use::
 
    make uninstall
 
-# TODO #################################
+TROUBLESHOOTING
+===============
+* If you get an error like ``mkoctfile: not found``, you need the ``octave-pkg-dev``
+
+
+TODO
+====
 
 - write h5info, h5disp
 
