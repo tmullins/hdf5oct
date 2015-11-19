@@ -11,7 +11,7 @@ Copyright 2008-2013 Andrew Collette
 This is a library for GNU Octave for reading hdf5 files. At the moment it
 provides the following functions:
 
- h5read: modeled after Matlab's h5read, which can read subsets of a
+h5read: modeled after Matlab's h5read, which can read subsets of a
  	 dataset.  Octave's load function will attempt to read an
  	 entire dataset, which for very large datasets is
  	 undesired. h5util's h5read function does slightly better,
@@ -19,19 +19,19 @@ provides the following functions:
  	 fairly limiting. This exposes libhdf5's H5Sselect_hyperslab
  	 in a way which tries to be compatible with Matlab.
 
- h5readatt: Most of this function was written by thliebig. It allows
- 	    to read scalar HDF5 attributes of some types.
+h5readatt: Most of this function was written by thliebig. It allows
+           to read scalar HDF5 attributes of some types.
 
- h5write: Write a matrix to a dataset. This
-          will either overwrite an already existing dataset, or allow to
-	  append hyperslabs to existing datasets.
+h5write: Write a matrix to a dataset. This
+         will either overwrite an already existing dataset, or allow to
+         append hyperslabs to existing datasets.
 
- h5writeatt: Attach an attribute to an object.
+h5writeatt: Attach an attribute to an object.
 
- h5create: Create a dataset and specify its extent dimensions,
-           datatype and chunk size.
+h5create: Create a dataset and specify its extent dimensions,
+          datatype and chunk size.
 
- h5delete: Delete a group, dataset, or attribute.
+h5delete: Delete a group, dataset, or attribute.
 
 Note that only few of the HDF5 datatypes are supported by each of the
 functions hdf5oct at the moment, typically one or several of double,
@@ -69,7 +69,7 @@ To uninstall the package you may want to use::
 
 TROUBLESHOOTING
 ===============
-* If you get an error like ``mkoctfile: not found``, you need the ``octave-pkg-dev``
+* If you get an error like ``mkoctfile: not found``, you need ``liboctave-dev``
 
 
 TODO
