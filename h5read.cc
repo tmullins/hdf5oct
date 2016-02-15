@@ -722,7 +722,7 @@ H5File::read_dset_complete (const char *dsetname)
     return octave_value_list ();
 
   mat_dims.resize (max (rank, 2));
-  // .resize(1) still leaves mat_dims with a length of 2 for some reason, so
+  // .resize(1) still leaves mat_dims with a length of 2, so
   // we need at least 2 filled
   mat_dims(0) = mat_dims(1) = 1;
   for (int i = 0; i < rank; i++)
@@ -782,8 +782,8 @@ H5File::read_dset_hyperslab (const char *dsetname,
       error ("block must be a vector of length %d, the dataset rank", rank);
       return octave_value_list ();
     }
-  
-  // .resize(1) still leaves mat_dims with a length of 2 for some reason, so
+
+  // .resize(1) still leaves mat_dims with a length of 2, so
   // we need at least 2 filled
   mat_dims.resize (max (rank, 2));
   mat_dims(0) = mat_dims(1) = 1;
@@ -815,24 +815,45 @@ H5File::read_dset_hyperslab (const char *dsetname,
     }
 
   hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT, true);
+  if(hstart == NULL)
+    {
+      error ("error when allocating hstart array, for %s", dsetname);
+      return octave_value_list ();
+    }
   hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT, true);
+  if(hstride == NULL)
+    {
+      error ("error when allocating hstride array, for %s", dsetname);
+      return octave_value_list ();
+    }
   hsize_t *hcount = alloc_hsize (_count, ALLOC_HSIZE_DEFAULT, true);
+  if(hcount == NULL)
+    {
+      error ("error when allocating hcount array, for %s", dsetname);
+      return octave_value_list ();
+    }
   hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT, true);
-  // TODO check these (and hmem) for NULLs
-
+  if(hblock == NULL)
+    {
+      error ("error when allocating hblock array, for %s", dsetname);
+      return octave_value_list ();
+    }
+  
   herr_t sel_result = H5Sselect_hyperslab (dspace_id, H5S_SELECT_SET, hstart,
                                            hstride, hcount, hblock);
-
   free (hstart);
   free (hstride);
   free (hcount);
   free (hblock);
-
   if (sel_result < 0)
-    return octave_value_list ();
-
+    {
+      error ("error when selecting the hyperslab of dataset %s to read from", dsetname);
+      return octave_value_list ();
+    }
+  
   octave_value retval = read_dset ();
   return retval;
+  
 }
 
 octave_value
@@ -1178,10 +1199,29 @@ H5File::write_dset_hyperslab (const char *dsetname,
         h5_dims[rank-i-1] = end;
     }
   hsize_t *hstart = alloc_hsize (start, ALLOC_HSIZE_DEFAULT, true);
+  if(hstart == NULL)
+    {
+      error ("error when allocating hstart array, for %s", dsetname);
+      return;
+    }
   hsize_t *hstride = alloc_hsize (_stride, ALLOC_HSIZE_DEFAULT, true);
+  if(hstride == NULL)
+    {
+      error ("error when allocating hstride array, for %s", dsetname);
+      return;
+    }
   hsize_t *hcount = alloc_hsize (count, ALLOC_HSIZE_DEFAULT, true);
+  if(hcount == NULL)
+    {
+      error ("error when allocating hcount array, for %s", dsetname);
+      return;
+    }
   hsize_t *hblock = alloc_hsize (_block, ALLOC_HSIZE_DEFAULT, true);
-  // TODO check these (and hmem) for NULLs
+  if(hblock == NULL)
+    {
+      error ("error when allocating hblock array, for %s", dsetname);
+      return;
+    }
   
   // make the current size of the dataset bigger
   H5Sclose (dspace_id);
@@ -1211,6 +1251,11 @@ H5File::write_dset_hyperslab (const char *dsetname,
     }
   
   hsize_t *hmem = alloc_hsize (data.dims (), ALLOC_HSIZE_DEFAULT, false);
+  if(hmem == NULL)
+    {
+      error ("error when allocating hmem array, for %s", dsetname);
+      return;
+    }
   hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
   if (memspace_id < 0)
     {
