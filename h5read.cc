@@ -862,12 +862,23 @@ H5File::read_dset ()
   bool is_cmplx = false;
   type_id = H5Dget_type (dset_id);
   hid_t complex_type_id = hdf5_make_complex_type (H5T_NATIVE_DOUBLE);
+  
+  hsize_t *hmem = alloc_hsize (mat_dims, ALLOC_HSIZE_DEFAULT, false);
+  hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
+  free (hmem);
+  if (memspace_id < 0)
+    {
+      return octave_value_list ();
+    }
 
-  // hsize_t *hmem = alloc_hsize (mat_dims, ALLOC_HSIZE_DEFAULT, false);
-  // hid_t memspace_id = H5Screate_simple (rank, hmem, hmem);
-  // free (hmem);
+  if (H5Sselect_valid (dspace_id) <= 0)
+    {
+      error ("selected dataspace is not valid");
+      return octave_value_list ();
+    }
 
   octave_value retval;
+  herr_t read_result;
   if (H5Tget_class (type_id) == H5T_COMPOUND &&
       H5Tget_class (complex_type_id) == H5T_COMPOUND &&
       hdf5_types_compatible (type_id, complex_type_id) > 0)
@@ -875,27 +886,10 @@ H5File::read_dset ()
       ComplexNDArray ret (mat_dims);
       // macro begin
 #define HDF5_READ_DATA(type)                                            \
-      if (H5Sselect_valid (dspace_id) <= 0)                             \
-        {                                                               \
-          error ("selected dataspace is not valid");                    \
-          return octave_value_list ();                                  \
-        }                                                               \
-                                                                        \
-      int mdc_nelem = -1;                                               \
-      size_t rdcc_nelem = -1;                                           \
-      size_t rdcc_nbytes = -1;                                          \
-      double rdcc_w0 = -1;                                              \
-      if (H5Pget_cache (H5Fget_access_plist (file), &mdc_nelem,         \
-                        &rdcc_nelem, &rdcc_nbytes, &rdcc_w0 ) < 0)      \
-        {                                                               \
-          error ("could not determine raw data chunk cache parameters."); \
-          return octave_value_list ();                                  \
-        }                                                               \
-      /*cout << "cache params:" << rdcc_nelem << "," << rdcc_nbytes << endl;*/ \
-      herr_t read_result = H5Dread (dset_id,                            \
-                                    type,                               \
-                                    H5S_ALL, dspace_id,                 \
-                                    H5P_DEFAULT, ret.fortran_vec ());   \
+      read_result = H5Dread (dset_id,                                   \
+                             type,                                      \
+                             memspace_id, dspace_id,                    \
+                             H5P_DEFAULT, ret.fortran_vec ());          \
       if (read_result < 0)                                              \
         {                                                               \
           error ("error when reading dataset");                         \
