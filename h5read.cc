@@ -529,7 +529,10 @@ DEFUN_DLD (h5delete, args, nargout,
 @deftypefnx {Loadable Function} h5delete (@var{filename}, @var{objname}, @var{attname})\n\
 \n\
 In the first form, delete a dataset or group with name @var{objname}\n\
-in the HDF5 file specified by @var{filename}.\n\
+in the HDF5 file specified by @var{filename}. Note that hdf5 is like a\n\
+filesystem: the library does not free the used space when a dataset is\n\
+deleted. One can use the tool h5repack afterwards to actually reduce the \n\
+filesize.\n                                                             \
 \n\
 In the second form, delete an attribute with name @var{attname} associated\n\
 to a dataset or group with name @var{objname}\n\
