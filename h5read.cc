@@ -170,7 +170,7 @@ the appropriate size for the given HDF5 type.\n\
     return octave_value_list ();
 
   //open the hdf5 file
-  H5File file (filename.c_str (), false);
+  H5File file (filename.c_str (), false, false);
   if (error_state)
     return octave_value_list ();
 
@@ -244,7 +244,7 @@ is to read.\n\
     return octave_value_list ();
   
   //open the hdf5 file
-  H5File file (filename.c_str (), false);
+  H5File file (filename.c_str (), false, false);
   if (error_state)
     return octave_value_list ();
         
@@ -318,7 +318,7 @@ the appropriate size for the given Octave type.\n\
   if (nargin == 3)
     {
       //open the hdf5 file, create it if it does not exist
-      H5File file (filename.c_str (), true);
+      H5File file (filename.c_str (), true, true);
       if (error_state)
         return octave_value_list ();
       file.write_dset (location.c_str (),
@@ -327,7 +327,7 @@ the appropriate size for the given Octave type.\n\
   else  
     {
       //open the hdf5 file, complain if it does not exist
-      H5File file (filename.c_str (), false);
+      H5File file (filename.c_str (), false, true);
       if (error_state)
         return octave_value_list ();
 
@@ -397,7 +397,7 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
     return octave_value_list ();
     
   //open the hdf5 file
-  H5File file (filename.c_str (), false);
+  H5File file (filename.c_str (), false, true);
   if (error_state)
     return octave_value_list ();
 
@@ -513,7 +513,7 @@ setting is not @sc{matlab} compatible.\n\
   
   
   //open the hdf5 file
-  H5File file (filename.c_str (), true);
+  H5File file (filename.c_str (), true, true);
   if (error_state)
     return octave_value_list ();
   file.create_dset (location.c_str (), size, datatype.c_str (), chunksize);
@@ -568,7 +568,7 @@ Note that this function is not @sc{matlab} compliant.\n\
     return octave_value_list ();
 
   //open the hdf5 file
-  H5File file (filename.c_str (), true);
+  H5File file (filename.c_str (), true, true);
   if (error_state)
     return octave_value_list ();
   if (nargin == 2)
@@ -586,7 +586,8 @@ Note that this function is not @sc{matlab} compliant.\n\
 
 #if defined (HAVE_HDF5) && defined (HAVE_HDF5_18)
 
-H5File::H5File (const char *filename, const bool create_if_nonexisting)
+H5File::H5File (const char *filename, const bool create_if_nonexisting,
+		const bool write_access)
 {
   H5E_auto_t oef;
   void *olderr;
@@ -606,7 +607,9 @@ H5File::H5File (const char *filename, const bool create_if_nonexisting)
         error ("The file is not in the HDF5 format, %s: %s", filename, strerror (errno));
       else
         {
-          file = H5Fopen (filename, H5F_ACC_RDWR, H5P_DEFAULT);
+          file = H5Fopen (filename,
+			  write_access ? H5F_ACC_RDWR : H5F_ACC_RDONLY,
+			  H5P_DEFAULT);
           if (file < 0)
             error ("Opening the file failed, %s: %s", filename, strerror (errno));
         }
