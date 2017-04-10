@@ -414,7 +414,8 @@ DEFUN_DLD (h5create, args, nargout,
 @deftypefn {Loadable Function} h5create (@var{filename}, @var{dsetname}, @var{size}, @var{key}, @var{val},...)\n\
 \n\
 Create a dataset with name @var{dsetname} and size @var{size} \n\
-in the HDF5 file specified by @var{filename}.\n\
+in the HDF5 file specified by @var{filename}.  Intermediate groups\n\
+are created as necessary.\n\
 \n\
 The vector @var{size} may contain one or several Inf (or \n\
 equivalently: zero) values.\n\
@@ -1600,15 +1601,19 @@ H5File::create_dset (const char *location, const Matrix& size,
         }
       free (dims_chunk);
     }
-  
+
+  // create non-existent intermediate groups.
+  hid_t lcpl_list = H5Pcreate (H5P_LINK_CREATE);
+  H5Pset_create_intermediate_group (lcpl_list, 1);
   dset_id = H5Dcreate (file, location, type_id, dspace_id,
-                       H5P_DEFAULT, crp_list, H5P_DEFAULT);
+                       lcpl_list, crp_list, H5P_DEFAULT);
   if (dset_id < 0)
     {
       error ("Could not create dataset %s", location);
       return;
     }
   H5Pclose (crp_list);
+  H5Pclose (lcpl_list);
 
 }
 
