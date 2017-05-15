@@ -148,7 +148,7 @@ the appropriate size for the given HDF5 type.\n\
 @end deftypefn")
 {
 #if ! (defined (HAVE_HDF5) && defined (HAVE_HDF5_18))
-  gripe_disabled_feature ("h5read", "HDF5 IO");
+  err_disabled_feature ("h5read", "HDF5 IO");
   return octave_value_list ();
 #else
   int nargin = args.length ();
@@ -222,7 +222,7 @@ is to read.\n\
 {
   octave_value retval;
 #if ! (defined (HAVE_HDF5) && defined (HAVE_HDF5_18))
-  gripe_disabled_feature ("h5readatt", "HDF5 IO");
+  err_disabled_feature ("h5readatt", "HDF5 IO");
   return octave_value_list ();
 #else
   int nargin = args.length ();
@@ -293,7 +293,7 @@ the appropriate size for the given Octave type.\n\
 @end deftypefn")
 {
 #if ! (defined (HAVE_HDF5) && defined (HAVE_HDF5_18))
-  gripe_disabled_feature ("h5write", "HDF5 IO");
+  err_disabled_feature ("h5write", "HDF5 IO");
   return octave_value_list ();
 #else
   int nargin = args.length ();
@@ -373,7 +373,7 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
 @end deftypefn")
 {
 #if ! (defined (HAVE_HDF5) && defined (HAVE_HDF5_18))
-  gripe_disabled_feature ("h5writeatt", "HDF5 IO");
+  err_disabled_feature ("h5writeatt", "HDF5 IO");
   return octave_value_list ();
 #else
   int nargin = args.length ();
@@ -443,7 +443,7 @@ setting is not @sc{matlab} compatible.\n\
 @end deftypefn")
 {
 #if ! (defined (HAVE_HDF5) && defined (HAVE_HDF5_18))
-  gripe_disabled_feature("h5create", "HDF5 IO");
+  err_disabled_feature("h5create", "HDF5 IO");
   return octave_value_list ();
 #else
   int nargin = args.length ();
@@ -545,7 +545,7 @@ Note that this function is not @sc{matlab} compliant.\n\
 @end deftypefn")
 {
 #if ! (defined (HAVE_HDF5) && defined (HAVE_HDF5_18))
-  gripe_disabled_feature("h5delete", "HDF5 IO");
+  err_disabled_feature("h5delete", "HDF5 IO");
   return octave_value_list ();
 #else
   int nargin = args.length ();
