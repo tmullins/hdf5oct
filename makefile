@@ -3,9 +3,13 @@ src= h5read.cc
 headers=h5read.h
 octs=$(src:.cc=.oct)
 objs=$(src:.cc=.o)
-MKOCTFILE=CXX=$(CXX) mkoctfile -g
 
-VERSION=0.4.0
+H5FLAGS=$(shell octave --eval 'exit(__octave_config_info__ ("build_features").HDF5 != 1)' &> /dev/null && echo "-DHAVE_HDF5") \
+$(shell octave --eval 'exit(__octave_config_info__ ("build_features").HDF5_18 != 1)' &> /dev/null && echo "-DHAVE_HDF5_18")
+
+MKOCTFILE=CXX="$(CXX)" CXXFLAGS="-ansi" mkoctfile -v -std=c++11 $(H5FLAGS)
+
+VERSION=0.5.0
 PACKAGEFILE=hdf5oct-$(VERSION).tar.gz
 
 .PHONY: test clean install uninstall package
@@ -13,6 +17,7 @@ PACKAGEFILE=hdf5oct-$(VERSION).tar.gz
 all: $(octs) package
 
 %.oct: $(objs)
+	echo $(MKOCTFILE) -o $@ $(objs)
 	$(MKOCTFILE) -o $@ $(objs)
 
 %.o: %.cc $(headers)
