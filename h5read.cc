@@ -61,7 +61,7 @@ using namespace std;
 bool
 any_int_leq_zero (const Matrix& mat)
 {
-  for (int i = 0; i < mat.numel (); i++)
+  for (int i = 0; i < mat.length (); i++)
     {
       if (mat(i) < 0.5)
         return true;
@@ -88,7 +88,7 @@ check_vec (const octave_value& val, Matrix& mat/*out*/,
   double mind, maxd;
   if (allow_zeros)
     {
-      for (int i = 0; i < mat.numel (); i++)
+      for (int i = 0; i < mat.length (); i++)
         {
           if (mat(i) == octave_Inf)
             mat(i) = 0;
@@ -154,7 +154,7 @@ the appropriate size for the given HDF5 type.\n\
   warn_disabled_feature ("h5read", "HDF5 IO");
   return octave_value ();
 #else
-  int nargin = args.numel ();
+  int nargin = args.length ();
 
   if (nargin < 2 || nargin == 3 || nargin > 6 || nargout > 1)
     {
@@ -228,7 +228,7 @@ is to read.\n\
   warn_disabled_feature ("h5readatt", "HDF5 IO");
   return octave_value ();
 #else
-  int nargin = args.numel ();
+  int nargin = args.length ();
   if (nargin != 3)
     {
       print_usage ();
@@ -299,7 +299,7 @@ the appropriate size for the given Octave type.\n\
   warn_disabled_feature ("h5write", "HDF5 IO");
   return octave_value ();
 #else
-  int nargin = args.numel ();
+  int nargin = args.length ();
 
   if (! (nargin == 3 || nargin == 5 || nargin  == 6 || nargin == 7) || nargout != 0)
     {
@@ -379,7 +379,7 @@ the object named @var{objectname} in the HDF5 file specified by @var{filename}.\
   warn_disabled_feature ("h5writeatt", "HDF5 IO");
   return octave_value ();
 #else
-  int nargin = args.numel ();
+  int nargin = args.length ();
 
   if (nargin != 4 || nargout != 0)
     {
@@ -448,7 +448,7 @@ setting is not @sc{matlab} compatible.\n\
   warn_disabled_feature("h5create", "HDF5 IO");
   return octave_value ();
 #else
-  int nargin = args.numel ();
+  int nargin = args.length ();
 
   if (! (nargin ==  3 || nargin == 5 || nargin == 7) || nargout != 0)
     {
@@ -547,7 +547,7 @@ Note that this function is not @sc{matlab} compliant.\n\
   warn_disabled_feature("h5delete", "HDF5 IO");
   return octave_value ();
 #else
-  int nargin = args.numel ();
+  int nargin = args.length ();
 
   if (! (nargin ==  2 || nargin == 3) || nargout != 0)
     {
@@ -662,7 +662,7 @@ template <typename T>
 hsize_t*
 H5File::alloc_hsize (const T& dim, const int mode, const bool reverse)
 {
-  int rank = dim.numel ();
+  int rank = dim.length ();
   hsize_t *hsize = (hsize_t*)malloc (rank * sizeof (hsize_t));
   for (int i = 0; i < rank; i++)
     {
@@ -725,7 +725,7 @@ H5File::read_dset_complete (const char *dsetname)
     return octave_value ();
 
   mat_dims.resize (max (rank, 2));
-  // .resize(1) still leaves mat_dims with a numel of 2 for some reason, so
+  // .resize(1) still leaves mat_dims with a length of 2 for some reason, so
   // we need at least 2 filled
   mat_dims(0) = mat_dims(1) = 1;
   for (int i = 0; i < rank; i++)
@@ -758,35 +758,35 @@ H5File::read_dset_hyperslab (const char *dsetname,
       return octave_value ();
     }
 
-  if (start.numel () != rank)
+  if (start.length () != rank)
     {
-      error ("start must be a vector of numel %d, the dataset rank", rank);
+      error ("start must be a vector of length %d, the dataset rank", rank);
       return octave_value ();
     }
-  if (count.numel () != rank)
+  if (count.length () != rank)
     {
-      error ("count must be a vector of numel %d, the dataset rank", rank);
+      error ("count must be a vector of length %d, the dataset rank", rank);
       return octave_value ();
     }
 
   Matrix _stride = stride;
   if (nargin < 3)
     _stride = Matrix (dim_vector(1, rank), 1);
-  if (_stride.numel () != rank)
+  if (_stride.length () != rank)
     {
-      error ("stride must be a vector of numel %d, the dataset rank", rank);
+      error ("stride must be a vector of length %d, the dataset rank", rank);
       return octave_value ();
     }
   Matrix _block = block;
   if (nargin < 4)
     _block = Matrix (dim_vector(1, rank), 1);
-  if (_block.numel () != rank)
+  if (_block.length () != rank)
     {
-      error ("block must be a vector of numel %d, the dataset rank", rank);
+      error ("block must be a vector of length %d, the dataset rank", rank);
       return octave_value ();
     }
 
-  // .resize(1) still leaves mat_dims with a numel of 2 for some reason, so
+  // .resize(1) still leaves mat_dims with a length of 2 for some reason, so
   // we need at least 2 filled
   mat_dims.resize (max (rank, 2));
   mat_dims(0) = mat_dims(1) = 1;
@@ -863,17 +863,17 @@ H5File::read_dset ()
           return octave_value ();                                  \
         }                                                               \
                                                                         \
-      int mdc_numel = -1;                                               \
-      size_t rdcc_numel = -1;                                           \
+      int mdc_length = -1;                                               \
+      size_t rdcc_length = -1;                                           \
       size_t rdcc_nbytes = -1;                                          \
       double rdcc_w0 = -1;                                              \
-      if (H5Pget_cache (H5Fget_access_plist (file), &mdc_numel,         \
-                        &rdcc_numel, &rdcc_nbytes, &rdcc_w0 ) < 0)      \
+      if (H5Pget_cache (H5Fget_access_plist (file), &mdc_length,         \
+                        &rdcc_length, &rdcc_nbytes, &rdcc_w0 ) < 0)      \
         {                                                               \
           error ("could not determine raw data chunk cache parameters."); \
           return octave_value ();                                  \
         }                                                               \
-      /*cout << "cache params:" << rdcc_numel << "," << rdcc_nbytes << endl;*/ \
+      /*cout << "cache params:" << rdcc_length << "," << rdcc_nbytes << endl;*/ \
       herr_t read_result = H5Dread (dset_id,                            \
                                     type,                               \
                                     H5S_ALL, dspace_id,                 \
@@ -970,7 +970,7 @@ void
 H5File::write_dset (const char *dsetname,
                     const octave_value ov_data)
 {
-  int rank = ov_data.dims ().numel ();
+  int rank = ov_data.dims ().length ();
 
   hsize_t *dims = alloc_hsize (ov_data.dims(), ALLOC_HSIZE_DEFAULT, true);
   dspace_id = H5Screate_simple (rank, dims, NULL);
@@ -986,7 +986,7 @@ H5File::write_dset (const char *dsetname,
 
   //check if all groups in the path dsetname exist. if not, create them
   string path (dsetname);
-  for (int i=1; i < path.numel (); i++)
+  for (int i=1; i < path.length (); i++)
     {
       if (path[i] == '/')
         {
@@ -1125,30 +1125,30 @@ H5File::write_dset_hyperslab (const char *dsetname,
       return;
     }
 
-  if (start.numel () != rank)
+  if (start.length () != rank)
     {
-      error ("start must be a vector of numel %d, the dataset rank", rank);
+      error ("start must be a vector of length %d, the dataset rank", rank);
       return;
     }
-  if (count.numel () != rank)
+  if (count.length () != rank)
     {
-      error ("count must be a vector of numel %d, the dataset rank", rank);
+      error ("count must be a vector of length %d, the dataset rank", rank);
       return;
     }
   Matrix _stride = stride;
   if (nargin < 3)
     _stride = Matrix (dim_vector(1, rank), 1);
-  if (_stride.numel () != rank)
+  if (_stride.length () != rank)
     {
-      error ("stride must be a vector of numel %d, the dataset rank", rank);
+      error ("stride must be a vector of length %d, the dataset rank", rank);
       return;
     }
   Matrix _block = block;
   if (nargin < 4)
     _block = Matrix (dim_vector(1, rank), 1);
-  if (_block.numel () != rank)
+  if (_block.length () != rank)
     {
-      error ("block must be a vector of numel %d, the dataset rank", rank);
+      error ("block must be a vector of length %d, the dataset rank", rank);
       return;
     }
 
@@ -1410,7 +1410,7 @@ H5File::write_att (const char *location, const char *attname,
   if (attvalue.is_string ())
     {
       type_id = H5Tcopy (H5T_C_S1);
-      H5Tset_size (type_id, attvalue.string_value ().numel ());
+      H5Tset_size (type_id, attvalue.string_value ().length ());
       H5Tset_strpad (type_id,H5T_STR_NULLTERM);
       mem_type_id = H5Tcopy (type_id);
 
@@ -1524,7 +1524,7 @@ H5File::create_dset (const char *location, const Matrix& size,
   hsize_t *dims = alloc_hsize (size, ALLOC_HSIZE_INF_TO_ZERO, true);
   // and produce unlimited maximum extent for..
   hsize_t *maxdims = alloc_hsize (size, ALLOC_HSIZE_INFZERO_TO_UNLIMITED, true);
-  dspace_id = H5Screate_simple (size.numel (), dims, maxdims);
+  dspace_id = H5Screate_simple (size.length (), dims, maxdims);
   free (dims);
   free (maxdims);
 
@@ -1547,7 +1547,7 @@ H5File::create_dset (const char *location, const Matrix& size,
           error ("Could not set chunked layout of %s", location);
           return;
         }
-      if (H5Pset_chunk (crp_list, size.numel (), dims_chunk) < 0)
+      if (H5Pset_chunk (crp_list, size.length (), dims_chunk) < 0)
         {
           error ("Could not set chunk size of %s", location);
           return;
@@ -1604,7 +1604,7 @@ H5File::get_auto_chunksize(const Matrix& dset_shape, int typesize)
   const int CHUNK_MAX = 1024*1024; // Hard upper limit (1M)
 
   Matrix chunksize = dset_shape;
-  int ndims = chunksize.numel ();
+  int ndims = chunksize.length ();
   for (int i = 0; i < ndims; i++)
     {
       //For unlimited dimensions we have to guess 1024
