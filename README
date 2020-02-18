@@ -39,7 +39,7 @@ integer and string.
 To install, just use
 
     make
-    
+
 This will produce a package file named "hdf5oct-*.tar.gz" .  Then
 you may either install the package with
 
@@ -48,7 +48,7 @@ you may either install the package with
 or you may start GNU Octave and install the package manually (using
 the correct file name) with the command
 
-    pkg install hdf5oct-0.2.0.tar.gz
+    pkg install hdf5oct-0.4.0.tar.gz
 
 This will put the *.oct files somewhere where Octave will find them.
 You can try running
