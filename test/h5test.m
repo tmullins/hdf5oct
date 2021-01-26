@@ -110,6 +110,9 @@ read_write_chunk_at("test.h5","created_dset_inf2",datachunk,start)
 %%%%%%%%
 h5create("test.h5","created_dset_inf23",[ 2 3 4],'Datatype','int8', 'ChunkSize', [2 3 2])
 
+%%%%%%%%
+h5create("test.h5","/nonexistent/groups/created_dset_single",[1],'Datatype','single')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp("Test h5write and h5read...")
 

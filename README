@@ -34,12 +34,16 @@ Note that only few of the HDF5 datatypes are supported by each of the
 functions hdf5oct at the moment, typically one or several of double,
 integer and string.
 
+# REQUIREMENTS #########################
+
+The wrapper h5c++ provided by the HDF5 library must be available.
+
 # INSTALLATION #########################
 
-To install, just use
+To compile this package, use
 
     make
-    
+
 This will produce a package file named "hdf5oct-*.tar.gz" .  Then
 you may either install the package with
 
@@ -50,7 +54,7 @@ the correct file name) with the command
 
     pkg install hdf5oct-0.2.0.tar.gz
 
-This will put the *.oct files somewhere where Octave will find them.
+Both will put the *.oct files somewhere where Octave will find them.
 You can try running
 
     make test
@@ -61,6 +65,10 @@ You can try running
 To uninstall the package you may want to use
 
    make uninstall
+
+or on the GNU Octave prompt
+
+   pkg uninstall hdf5oct
 
 # TODO #################################
 
